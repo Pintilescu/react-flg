@@ -1,12 +1,12 @@
 import type { FlaglineConfig, FlaglineUser, FlagValue, Unsubscribe } from './types';
 
 export class FlaglineClient {
-  private config: FlaglineConfig;
+  private _config: FlaglineConfig;
   private cache: Map<string, FlagValue> = new Map();
   private ready = false;
 
   constructor(config: FlaglineConfig) {
-    this.config = config;
+    this._config = config;
   }
 
   async initialize(): Promise<void> {
