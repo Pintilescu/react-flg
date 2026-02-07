@@ -29,6 +29,7 @@ async function main() {
       email: 'emily@acme.com',
       name: 'Emily Wu',
       role: 'OWNER',
+      color: '#a855f7',
       tenantId: tenant.id,
     },
   });
@@ -38,6 +39,7 @@ async function main() {
       email: 'sarah@acme.com',
       name: 'Sarah Kim',
       role: 'ADMIN',
+      color: '#2596be',
       tenantId: tenant.id,
     },
   });
@@ -47,6 +49,7 @@ async function main() {
       email: 'alex@acme.com',
       name: 'Alex Jones',
       role: 'MEMBER',
+      color: '#bf8b24',
       tenantId: tenant.id,
     },
   });
@@ -56,6 +59,7 @@ async function main() {
       email: 'john@acme.com',
       name: 'John Doe',
       role: 'MEMBER',
+      color: '#f710b5',
       tenantId: tenant.id,
     },
   });
@@ -187,11 +191,46 @@ async function main() {
   // Create audit log entries
   const now = new Date();
   const auditEntries = [
-    { user: emily, env: dev, action: 'FLAG_TOGGLED' as const, entity: flags[2], desc: 'Tagging Dark Mode Enabled', ago: 10 * 60 * 1000 },
-    { user: sarah, env: dev, action: 'FLAG_UPDATED' as const, entity: flags[1], desc: 'Targeting user_789', ago: 60 * 60 * 1000 },
-    { user: alex, env: prod, action: 'FLAG_UPDATED' as const, entity: flags[0], desc: 'Rollout 35% for New Checkout_Flow', ago: 3 * 60 * 60 * 1000 },
-    { user: emily, env: dev, action: 'FLAG_UPDATED' as const, entity: flags[3], desc: 'Tagging user_456 for Promo Banner', ago: 5 * 60 * 60 * 1000 },
-    { user: john, env: prod, action: 'FLAG_TOGGLED' as const, entity: flags[4], desc: 'Enabled API Rate Limit for 5% of users', ago: 8 * 60 * 60 * 1000 },
+    {
+      user: emily,
+      env: dev,
+      action: 'FLAG_TOGGLED' as const,
+      entity: flags[2],
+      desc: 'Tagging Dark Mode Enabled',
+      ago: 10 * 60 * 1000,
+    },
+    {
+      user: sarah,
+      env: dev,
+      action: 'FLAG_UPDATED' as const,
+      entity: flags[1],
+      desc: 'Targeting user_789',
+      ago: 60 * 60 * 1000,
+    },
+    {
+      user: alex,
+      env: prod,
+      action: 'FLAG_UPDATED' as const,
+      entity: flags[0],
+      desc: 'Rollout 35% for New Checkout_Flow',
+      ago: 3 * 60 * 60 * 1000,
+    },
+    {
+      user: emily,
+      env: dev,
+      action: 'FLAG_UPDATED' as const,
+      entity: flags[3],
+      desc: 'Tagging user_456 for Promo Banner',
+      ago: 5 * 60 * 60 * 1000,
+    },
+    {
+      user: john,
+      env: prod,
+      action: 'FLAG_TOGGLED' as const,
+      entity: flags[4],
+      desc: 'Enabled API Rate Limit for 5% of users',
+      ago: 8 * 60 * 60 * 1000,
+    },
   ];
 
   for (const entry of auditEntries) {
@@ -224,7 +263,7 @@ async function main() {
 
   console.log('Seed complete!');
   console.log(`  Tenant: ${tenant.name}`);
-  console.log(`  Users: ${[emily, sarah, alex, john].map(u => u.name).join(', ')}`);
+  console.log(`  Users: ${[emily, sarah, alex, john].map((u) => u.name).join(', ')}`);
   console.log(`  Project: ${project.name}`);
   console.log(`  Environments: dev, staging, prod`);
   console.log(`  Flags: ${flags.length}`);
