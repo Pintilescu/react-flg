@@ -36,6 +36,10 @@ export class FlaglineClient {
     this.cache.clear();
   }
 
+  getConfig(): FlaglineConfig {
+    return this.config;
+  }
+
   isReady(): boolean {
     return this.ready;
   }
