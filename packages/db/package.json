@@ -22,7 +22,7 @@
     "seed": "tsx prisma/seed.ts",
     "studio": "prisma studio",
     "type-check": "tsc --noEmit",
-    "lint": "eslint src/",
+    "lint": "eslint --ext .ts src/",
     "clean": "rm -rf dist .turbo"
   },
   "dependencies": {

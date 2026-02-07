@@ -80,6 +80,7 @@ model User {
   tenantId  String   @map("tenant_id")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
+  color     String   @default("#6B7280")
 
   tenant    Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   flags     Flag[]     @relation("CreatedBy")

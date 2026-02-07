@@ -1,195 +1,149 @@
-export default function Dashboard() {
+export const dynamic = 'force-dynamic';
+
+import { prisma } from '@flagline/db';
+
+function timeAgo(date: Date): string {
+  const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
+  const minutes = Math.floor(seconds / 60);
+  const hours = Math.floor(minutes / 60);
+  const days = Math.floor(hours / 24);
+
+  if (minutes < 60) return `${minutes} mins ago`;
+  if (hours < 24) return `${hours} hours ago`;
+  if (days === 1) return 'Yesterday';
+  if (days < 7) return `${days} days ago`;
+  return `${Math.floor(days / 7)} weeks ago`;
+}
+
+export default async function Dashboard() {
+  const flagsCount = await prisma.flag.count();
+  const flags = await prisma.flag.findMany({
+    take: 5,
+    orderBy: { createdAt: 'desc' },
+    include: {
+      environments: {
+        include: { environment: true },
+      },
+    },
+  });
+
+  const environmentActivity = await prisma.auditLog.findMany({
+    take: 5,
+    orderBy: { createdAt: 'desc' },
+    include: {
+      user: true,
+      environment: true,
+    },
+  });
+
   return (
     <div>
-      {/* Stat cards */}
-      <div className="grid grid-cols-3 gap-6">
-        <div className="bg-gray-900 p-6 rounded-lg">
-          <p className="text-3xl font-bold">123</p>
-          <p className="text-sm text-gray-400">Some text</p>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="bg-white border border-gray-200 p-6 rounded-lg">
+          <p className="text-3xl font-bold text-gray-900">{flagsCount}</p>
+          <p className="text-sm text-gray-500">Total Flags</p>
         </div>
-        <div className="bg-gray-900 p-6 rounded-lg">
-          <p className="text-3xl font-bold">123</p>
-          <p className="text-sm text-gray-400">Some text</p>
+        <div className="bg-white border border-gray-200 p-6 rounded-lg">
+          <p className="text-3xl font-bold text-gray-900">123</p>
+          <p className="text-sm text-gray-500">Some text</p>
         </div>
-        <div className="bg-gray-900 p-6 rounded-lg">
-          <p className="text-3xl font-bold">123</p>
-          <p className="text-sm text-gray-400">Some text</p>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-5 gap-6 mt-8">
-        <div className="col-span-3">
-          <h2 className="text-lg font-semibold mb-4">Most Recent Flags</h2>
-          <table className="w-full">
-            <thead>
-              <tr className="text-gray-400 text-sm bg-gray-700 border-b border-gray-800">
-                <th className="text-left py-3 px-4 whitespace-nowrap">Flag Name</th>
-                <th className="text-left py-3 px-4">Environment</th>
-                <th className="text-left py-3 px-4">Created</th>
-                <th className="text-left py-3 px-4">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr className="border-b border-gray-600">
-                <td className="py-3 px-4 whitespace-nowrap">New Checkout Flow</td>
-                <td className="py-3 px-4">
-                  <span className="bg-green-600 text-white text-xs px-2 py-1 rounded-full">
-                    dev
-                  </span>
-                </td>
-                <td className="py-3 px-4">Yesterday</td>
-                <td className="py-3 px-4">Active</td>
-              </tr>
-              <tr className="border-b border-gray-600">
-                <td className="py-3 px-4 whitespace-nowrap">Beta Feature Toggle</td>
-                <td className="py-3 px-4">
-                  <span className="bg-yellow-600 text-white text-xs px-2 py-1 rounded-full">
-                    staging
-                  </span>
-                </td>
-                <td className="py-3 px-4">3 days ago</td>
-                <td className="py-3 px-4">Inactive</td>
-              </tr>
-              <tr className="border-b border-gray-600">
-                <td className="py-3 px-4 whitespace-nowrap">Dark Mode Enabled</td>
-                <td className="py-3 px-4">
-                  <span className="bg-red-600 text-white text-xs px-2 py-1 rounded-full">prod</span>
-                </td>
-                <td className="py-3 px-4">Last week</td>
-                <td className="py-3 px-4">Active</td>
-              </tr>
-              <tr className="border-b border-gray-600">
-                <td className="py-3 px-4 whitespace-nowrap">Promo Banner</td>
-                <td className="py-3 px-4">
-                  <span className="bg-green-600 text-white text-xs px-2 py-1 rounded-full">
-                    dev
-                  </span>
-                </td>
-                <td className="py-3 px-4">Last week</td>
-                <td className="py-3 px-4">Inactive</td>
-              </tr>
-              <tr className="border-b border-gray-600">
-                <td className="py-3 px-4 whitespace-nowrap">API Rate Limit</td>
-                <td className="py-3 px-4">
-                  <span className="bg-red-600 text-white text-xs px-2 py-1 rounded-full">prod</span>
-                </td>
-                <td className="py-3 px-4 whitespace-nowrap">2 weeks ago</td>
-                <td className="py-3 px-4 whitespace-nowrap">Active</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        <div className="col-span-2">
-          <h2 className="text-lg font-semibold mb-4">Environment Activity</h2>
-          <div className="space-y-0">
-            <div className="flex items-start gap-3 border-b border-gray-800 py-4">
-              <div className="w-10 h-10 shrink-0 rounded-full bg-purple-500"></div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <p className="font-semibold text-sm">Emily Wu</p>
-                  <span className="bg-green-600 text-white text-xs px-2 py-0.5 rounded-full">
-                    dev
-                  </span>
-                </div>
-                <p className="text-sm text-gray-400 mt-1">Tagging Dark Mode Enabled</p>
-              </div>
-              <p className="text-xs text-gray-400 whitespace-nowrap">10 mins ago</p>
-            </div>
-            <div className="flex items-start gap-3 border-b border-gray-800 py-4">
-              <div className="w-10 h-10 shrink-0 rounded-full bg-gray-500"></div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <p className="font-semibold text-sm">Sarah Kim</p>
-                  <span className="bg-green-600 text-white text-xs px-2 py-0.5 rounded-full">
-                    dev
-                  </span>
-                </div>
-                <p className="text-sm text-gray-400 mt-1">Targeting user_789</p>
-              </div>
-              <p className="text-xs text-gray-400 whitespace-nowrap">1 hour ago</p>
-            </div>
-            <div className="flex items-start gap-3 border-b border-gray-800 py-4">
-              <div className="w-10 h-10 shrink-0 rounded-full bg-blue-500"></div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <p className="font-semibold text-sm">Alex Jones</p>
-                  <span className="bg-red-600 text-white text-xs px-2 py-0.5 rounded-full">
-                    prod
-                  </span>
-                </div>
-                <p className="text-sm text-gray-400 mt-1">Rollout 35% for New Checkout_Flow</p>
-              </div>
-              <p className="text-xs text-gray-400 whitespace-nowrap">3 hours ago</p>
-            </div>
-            <div className="flex items-start gap-3 border-b border-gray-800 py-4">
-              <div className="w-10 h-10 shrink-0 rounded-full bg-purple-500"></div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <p className="font-semibold text-sm">Emily Wu</p>
-                  <span className="bg-green-600 text-white text-xs px-2 py-0.5 rounded-full">
-                    dev
-                  </span>
-                </div>
-                <p className="text-sm text-gray-400 mt-1">Tagging user_456 for Promo Banner</p>
-              </div>
-              <p className="text-xs text-gray-400 whitespace-nowrap">5 hours ago</p>
-            </div>
-            <div className="flex items-start gap-3 py-4">
-              <div className="w-10 h-10 shrink-0 rounded-full bg-amber-600"></div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <p className="font-semibold text-sm">John Doe</p>
-                  <span className="bg-red-600 text-white text-xs px-2 py-0.5 rounded-full">
-                    prod
-                  </span>
-                </div>
-                <p className="text-sm text-gray-400 mt-1">Enabled API Rate Limit for 5% of users</p>
-              </div>
-              <p className="text-xs text-gray-400 whitespace-nowrap">8 hours ago</p>
-            </div>
-          </div>
+        <div className="bg-white border border-gray-200 p-6 rounded-lg">
+          <p className="text-3xl font-bold text-gray-900">123</p>
+          <p className="text-sm text-gray-500">Some text</p>
         </div>
       </div>
 
-      <div className="mt-8">
-        <h2 className="text-lg font-semibold mb-4">Getting Started</h2>
-        <div className="grid grid-cols-4 gap-6">
-          <div className="bg-gray-900 rounded-lg p-6">
-            <p className="font-semibold mb-2">Create a Project</p>
-            <p className="text-sm text-gray-400 mb-4">
-              Organize your feature flags into logical projects.
-            </p>
-            <button className="bg-purple-600 hover:bg-purple-700 text-white text-sm px-4 py-2 rounded-lg">
-              Get Started
-            </button>
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 mt-8">
+        <div className="lg:col-span-3">
+          <h2 className="text-lg font-semibold mb-4 text-gray-900">Most Recent Flags</h2>
+          <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+            <table className="w-full">
+              <thead>
+                <tr className="text-gray-500 text-sm bg-gray-50 border-b border-gray-200">
+                  <th className="text-left py-3 px-4 whitespace-nowrap font-medium">Flag Name</th>
+                  <th className="text-left py-3 px-4 font-medium">Environment</th>
+                  <th className="text-left py-3 px-4 font-medium">Created</th>
+                  <th className="text-left py-3 px-4 font-medium">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {flags.map((flag) => {
+                  const prodEnvironment = flag.environments.find(
+                    (env) => env.environment.isProduction,
+                  );
+
+                  return (
+                    <tr key={flag.id} className="border-b border-gray-100 hover:bg-gray-50">
+                      <td className="py-3 px-4 whitespace-nowrap text-gray-900">{flag.name}</td>
+                      <td className="py-3 px-4">
+                        <div className="flex gap-1">
+                          {prodEnvironment && (
+                            <span
+                              key={prodEnvironment.id}
+                              className="text-white text-xs px-2 py-1 rounded-full"
+                              style={{ backgroundColor: prodEnvironment.environment.color }}
+                            >
+                              {prodEnvironment.environment.slug}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="py-3 px-4 text-gray-500">{timeAgo(flag.createdAt)}</td>
+                      <td className="py-3 px-4">
+                        <span
+                          className={
+                            prodEnvironment?.enabled
+                              ? 'text-green-600 font-medium'
+                              : 'text-gray-400'
+                          }
+                        >
+                          {prodEnvironment?.enabled === true ? 'Active' : 'Inactive'}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
-          <div className="bg-gray-900 rounded-lg p-6">
-            <p className="font-semibold mb-2">2. Add Your First Flag</p>
-            <p className="text-sm text-gray-400 mb-4">
-              Define a new feature flag and set its targeting rules.
-            </p>
-            <button className="bg-purple-600 hover:bg-purple-700 text-white text-sm px-4 py-2 rounded-lg">
-              Get Started
-            </button>
-          </div>
-          <div className="bg-gray-900 rounded-lg p-6">
-            <p className="font-semibold mb-2">3. Install the SDK</p>
-            <p className="text-sm text-gray-400 mb-4">
-              Integrate Flagline into your app using our SDK.
-            </p>
-            <button className="bg-purple-600 hover:bg-purple-700 text-white text-sm px-4 py-2 rounded-lg">
-              Get Started
-            </button>
-          </div>
-          <div className="bg-gray-900 rounded-lg p-6">
-            <p className="font-semibold mb-2">4. Deploy with Flags</p>
-            <p className="text-sm text-gray-400 mb-4">
-              Control your feature rollouts through Flagline.
-            </p>
-            <button className="bg-purple-600 hover:bg-purple-700 text-white text-sm px-4 py-2 rounded-lg">
-              Get Started
-            </button>
+        </div>
+
+        <div className="lg:col-span-2">
+          <h2 className="text-lg font-semibold mb-4 text-gray-900">Environment Activity</h2>
+          <div className="bg-white border border-gray-200 rounded-lg p-4">
+            {environmentActivity.map((activity, index) => (
+              <div
+                key={activity.id}
+                className={`flex items-start gap-3 py-4 ${
+                  index < environmentActivity.length - 1 ? 'border-b border-gray-100' : ''
+                }`}
+              >
+                <div
+                  className="w-10 h-10 shrink-0 rounded-full"
+                  style={{ backgroundColor: activity.user.color }}
+                ></div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <p className="font-semibold text-sm text-gray-900">{activity.user.name}</p>
+                    {activity.environment?.isProduction && (
+                      <span
+                        key={activity.environmentId}
+                        className="text-white text-xs px-2 py-0.5 rounded-full"
+                        style={{ backgroundColor: activity.environment.color }}
+                      >
+                        {activity.environment.slug}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-sm text-gray-500 mt-1">
+                    {(activity.after as { description?: string })?.description}
+                  </p>
+                </div>
+                <p className="text-xs text-gray-400 whitespace-nowrap">
+                  {timeAgo(activity.createdAt)}
+                </p>
+              </div>
+            ))}
           </div>
         </div>
       </div>

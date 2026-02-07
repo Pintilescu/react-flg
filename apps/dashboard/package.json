@@ -6,7 +6,7 @@
     "dev": "next dev --port 3000",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
+    "lint": "eslint --ext .ts,.tsx app/",
     "type-check": "tsc --noEmit",
     "clean": "rm -rf .next .turbo"
   },

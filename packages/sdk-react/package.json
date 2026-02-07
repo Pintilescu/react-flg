@@ -20,7 +20,7 @@
     "type-check": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "lint": "eslint src/",
+    "lint": "eslint --ext .ts,.tsx src/",
     "clean": "rm -rf dist .turbo"
   },
   "dependencies": {

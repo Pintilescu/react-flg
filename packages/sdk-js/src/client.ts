@@ -1,13 +1,10 @@
 import type { FlaglineConfig, FlaglineUser, FlagValue, Unsubscribe } from './types';
 
 export class FlaglineClient {
-  private config: FlaglineConfig;
   private cache: Map<string, FlagValue> = new Map();
   private ready = false;
 
-  constructor(config: FlaglineConfig) {
-    this.config = config;
-  }
+  constructor(private readonly config: FlaglineConfig) {}
 
   async initialize(): Promise<void> {
     // TODO: fetch flags from API, open SSE connection
@@ -37,6 +34,10 @@ export class FlaglineClient {
 
   reset(): void {
     this.cache.clear();
+  }
+
+  getConfig(): FlaglineConfig {
+    return this.config;
   }
 
   isReady(): boolean {
