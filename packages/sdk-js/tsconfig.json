@@ -1,0 +1,12 @@
+{
+  "extends": "@flagline/config-typescript/base.json",
+  "compilerOptions": {
+    "target": "ES2017",
+    "lib": ["ES2022", "DOM"],
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "rootDir": "./src",
+    "outDir": "./dist"
+  },
+  "include": ["src"]
+}

@@ -1,0 +1,251 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Enums ──────────────────────────────────────────────
+
+enum UserRole {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+enum FlagType {
+  BOOLEAN
+  STRING
+  NUMBER
+  JSON
+}
+
+enum Plan {
+  FREE
+  STARTER
+  PRO
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  PAST_DUE
+  CANCELED
+  TRIALING
+  INCOMPLETE
+  UNPAID
+}
+
+enum AuditAction {
+  FLAG_CREATED
+  FLAG_UPDATED
+  FLAG_DELETED
+  FLAG_TOGGLED
+  RULE_CREATED
+  RULE_UPDATED
+  RULE_DELETED
+  ENVIRONMENT_CREATED
+  PROJECT_CREATED
+  APIKEY_CREATED
+  APIKEY_REVOKED
+  MEMBER_INVITED
+  MEMBER_REMOVED
+}
+
+// ─── Models ─────────────────────────────────────────────
+
+model Tenant {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  users        User[]
+  projects     Project[]
+  auditLogs    AuditLog[]
+  subscription Subscription?
+  usage        Usage[]
+
+  @@map("tenants")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  avatarUrl String?  @map("avatar_url")
+  role      UserRole @default(MEMBER)
+  tenantId  String   @map("tenant_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  tenant    Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  flags     Flag[]     @relation("CreatedBy")
+  apiKeys   ApiKey[]   @relation("CreatedBy")
+  auditLogs AuditLog[]
+
+  @@index([tenantId])
+  @@map("users")
+}
+
+model Project {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String
+  description String?
+  tenantId    String   @map("tenant_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  environments Environment[]
+  flags        Flag[]
+  apiKeys      ApiKey[]
+  auditLogs    AuditLog[]
+
+  @@unique([tenantId, slug])
+  @@map("projects")
+}
+
+model Environment {
+  id           String   @id @default(cuid())
+  name         String
+  slug         String
+  color        String   @default("#6B7280")
+  isProduction Boolean  @default(false) @map("is_production")
+  sortOrder    Int      @default(0) @map("sort_order")
+  projectId    String   @map("project_id")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  project          Project           @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  flagEnvironments FlagEnvironment[]
+  apiKeys          ApiKey[]
+  auditLogs        AuditLog[]
+
+  @@unique([projectId, slug])
+  @@map("environments")
+}
+
+model Flag {
+  id           String   @id @default(cuid())
+  key          String
+  name         String
+  description  String?
+  type         FlagType @default(BOOLEAN)
+  defaultValue Json     @default("false") @map("default_value")
+  isArchived   Boolean  @default(false) @map("is_archived")
+  projectId    String   @map("project_id")
+  createdById  String   @map("created_by_id")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  project      Project           @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdBy    User              @relation("CreatedBy", fields: [createdById], references: [id])
+  environments FlagEnvironment[]
+
+  @@unique([projectId, key])
+  @@index([projectId, isArchived])
+  @@map("flags")
+}
+
+model FlagEnvironment {
+  id                String   @id @default(cuid())
+  flagId            String   @map("flag_id")
+  environmentId     String   @map("environment_id")
+  enabled           Boolean  @default(false)
+  rules             Json     @default("[]")
+  rolloutPercentage Int      @default(100) @map("rollout_percentage")
+  defaultValue      Json?    @map("default_value")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  flag        Flag        @relation(fields: [flagId], references: [id], onDelete: Cascade)
+  environment Environment @relation(fields: [environmentId], references: [id], onDelete: Cascade)
+
+  @@unique([flagId, environmentId])
+  @@index([environmentId, enabled])
+  @@map("flag_environments")
+}
+
+model ApiKey {
+  id            String    @id @default(cuid())
+  name          String
+  keyHash       String    @unique @map("key_hash")
+  keyPrefix     String    @map("key_prefix")
+  projectId     String    @map("project_id")
+  environmentId String    @map("environment_id")
+  createdById   String    @map("created_by_id")
+  lastUsedAt    DateTime? @map("last_used_at")
+  expiresAt     DateTime? @map("expires_at")
+  revokedAt     DateTime? @map("revoked_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+
+  project     Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  environment Environment @relation(fields: [environmentId], references: [id], onDelete: Cascade)
+  createdBy   User        @relation("CreatedBy", fields: [createdById], references: [id])
+
+  @@index([projectId, environmentId])
+  @@map("api_keys")
+}
+
+model AuditLog {
+  id            String      @id @default(cuid())
+  tenantId      String      @map("tenant_id")
+  projectId     String?     @map("project_id")
+  environmentId String?     @map("environment_id")
+  userId        String      @map("user_id")
+  action        AuditAction
+  entityType    String      @map("entity_type")
+  entityId      String      @map("entity_id")
+  before        Json?
+  after         Json?
+  metadata      Json?
+  ipAddress     String?     @map("ip_address")
+  userAgent     String?     @map("user_agent")
+  createdAt     DateTime    @default(now()) @map("created_at")
+
+  tenant      Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  project     Project?     @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  environment Environment? @relation(fields: [environmentId], references: [id], onDelete: SetNull)
+  user        User         @relation(fields: [userId], references: [id])
+
+  @@index([tenantId, createdAt(sort: Desc)])
+  @@index([projectId, createdAt(sort: Desc)])
+  @@map("audit_logs")
+}
+
+model Subscription {
+  id                   String             @id @default(cuid())
+  tenantId             String             @unique @map("tenant_id")
+  stripeCustomerId     String             @unique @map("stripe_customer_id")
+  stripeSubscriptionId String?            @unique @map("stripe_subscription_id")
+  stripePriceId        String?            @map("stripe_price_id")
+  plan                 Plan               @default(FREE)
+  status               SubscriptionStatus @default(ACTIVE)
+  currentPeriodStart   DateTime?          @map("current_period_start")
+  currentPeriodEnd     DateTime?          @map("current_period_end")
+  cancelAtPeriodEnd    Boolean            @default(false) @map("cancel_at_period_end")
+  trialEndsAt          DateTime?          @map("trial_ends_at")
+  createdAt            DateTime           @default(now()) @map("created_at")
+  updatedAt            DateTime           @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("subscriptions")
+}
+
+model Usage {
+  id               String   @id @default(cuid())
+  tenantId         String   @map("tenant_id")
+  period           DateTime @db.Date
+  apiCalls         Int      @default(0) @map("api_calls")
+  flagEvaluations  Int      @default(0) @map("flag_evaluations")
+  sseConnections   Int      @default(0) @map("sse_connections")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, period])
+  @@map("usage")
+}

@@ -1,0 +1,31 @@
+{
+  "name": "@flagline/api",
+  "private": true,
+  "version": "0.0.0",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsup",
+    "start": "node dist/index.js",
+    "type-check": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint src/",
+    "clean": "rm -rf dist .turbo"
+  },
+  "dependencies": {
+    "@flagline/db": "workspace:*",
+    "@flagline/types": "workspace:*",
+    "fastify": "^5.2.1",
+    "ioredis": "^5.4.2"
+  },
+  "devDependencies": {
+    "@flagline/config-eslint": "workspace:*",
+    "@flagline/config-typescript": "workspace:*",
+    "@types/node": "^22.10.7",
+    "eslint": "^8.57.1",
+    "tsup": "^8.3.5",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3",
+    "vitest": "^2.1.8"
+  }
+}
