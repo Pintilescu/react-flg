@@ -169,10 +169,19 @@ async function main() {
 
   // Create flag environments (flag state per environment)
   const flagEnvData = [
+    // New Checkout Flow → all 3 envs
     { flag: flags[0], env: dev, enabled: true, rollout: 100 },
+    { flag: flags[0], env: staging, enabled: true, rollout: 100 },
+    { flag: flags[0], env: prod, enabled: true, rollout: 100 },
+    // Beta Feature Toggle → staging only
     { flag: flags[1], env: staging, enabled: false, rollout: 100 },
+    // Dark Mode → prod only
     { flag: flags[2], env: prod, enabled: true, rollout: 100 },
+    // Promo Banner → dev + staging
     { flag: flags[3], env: dev, enabled: false, rollout: 100 },
+    { flag: flags[3], env: staging, enabled: true, rollout: 100 },
+    // API Rate Limit → dev + prod
+    { flag: flags[4], env: dev, enabled: true, rollout: 100 },
     { flag: flags[4], env: prod, enabled: true, rollout: 5 },
   ];
 

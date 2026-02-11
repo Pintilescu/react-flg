@@ -1,16 +1,16 @@
 export type FlagValue = boolean | string | number | Record<string, unknown>;
 
-export interface FlaglineUser {
+export interface CrivlineUser {
   id: string;
   email?: string;
   name?: string;
   [key: string]: string | number | boolean | undefined;
 }
 
-export interface FlaglineConfig {
+export interface CrivlineConfig {
   apiKey: string;
   baseUrl?: string;
-  user?: FlaglineUser;
+  user?: CrivlineUser;
   enableStreaming?: boolean;
   refreshInterval?: number;
   defaultValues?: Record<string, FlagValue>;

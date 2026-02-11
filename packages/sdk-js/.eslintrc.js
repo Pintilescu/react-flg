@@ -1,1 +1,1 @@
-module.exports = require('@flagline/config-eslint');
+module.exports = require('@crivline/config-eslint');

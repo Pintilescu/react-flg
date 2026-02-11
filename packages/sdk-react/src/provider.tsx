@@ -1,23 +1,23 @@
 'use client';
 
-import { FlaglineClient } from '@flagline/js';
-import type { FlaglineConfig } from '@flagline/js';
+import { CrivlineClient } from '@crivline/js';
+import type { CrivlineConfig } from '@crivline/js';
 import { createContext, useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 
-export const FlaglineContext = createContext<FlaglineClient | null>(null);
+export const CrivlineContext = createContext<CrivlineClient | null>(null);
 
-interface FlaglineProviderProps {
-  config: FlaglineConfig;
+interface CrivlineProviderProps {
+  config: CrivlineConfig;
   children: ReactNode;
 }
 
-export function FlaglineProvider({ config, children }: FlaglineProviderProps) {
-  const clientRef = useRef<FlaglineClient | null>(null);
+export function CrivlineProvider({ config, children }: CrivlineProviderProps) {
+  const clientRef = useRef<CrivlineClient | null>(null);
   const [, setReady] = useState(false);
 
   useEffect(() => {
-    const client = new FlaglineClient(config);
+    const client = new CrivlineClient(config);
     clientRef.current = client;
 
     client.initialize().then(() => {
@@ -30,6 +30,6 @@ export function FlaglineProvider({ config, children }: FlaglineProviderProps) {
   }, [config]);
 
   return (
-    <FlaglineContext.Provider value={clientRef.current}>{children}</FlaglineContext.Provider>
+    <CrivlineContext.Provider value={clientRef.current}>{children}</CrivlineContext.Provider>
   );
 }

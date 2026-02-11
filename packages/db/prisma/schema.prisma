@@ -24,8 +24,9 @@ enum FlagType {
 
 enum Plan {
   FREE
-  STARTER
   PRO
+  TEAM
+  ENTERPRISE
 }
 
 enum SubscriptionStatus {
@@ -51,16 +52,36 @@ enum AuditAction {
   APIKEY_REVOKED
   MEMBER_INVITED
   MEMBER_REMOVED
+  SEGMENT_CREATED
+  SEGMENT_UPDATED
+  SEGMENT_DELETED
+  WEBHOOK_CREATED
+  WEBHOOK_UPDATED
+  WEBHOOK_DELETED
+  SCHEDULE_CREATED
+  SCHEDULE_CANCELED
+}
+
+enum WebhookEvent {
+  FLAG_CREATED
+  FLAG_UPDATED
+  FLAG_DELETED
+  FLAG_TOGGLED
+  ENVIRONMENT_CREATED
 }
 
 // ─── Models ─────────────────────────────────────────────
 
 model Tenant {
-  id        String   @id @default(cuid())
-  name      String
-  slug      String   @unique
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  id              String   @id @default(cuid())
+  name            String
+  slug            String   @unique
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+  ssoEnabled      Boolean  @default(false) @map("sso_enabled")
+  ssoProvider     String?  @map("sso_provider")
+  ssoConnectionId String?  @map("sso_connection_id")
+  ssoDomain       String?  @map("sso_domain")
 
   users        User[]
   projects     Project[]
@@ -81,11 +102,14 @@ model User {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
   color     String   @default("#6B7280")
+  auth0Id   String?  @unique @map("auth0_id")
 
   tenant    Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   flags     Flag[]     @relation("CreatedBy")
   apiKeys   ApiKey[]   @relation("CreatedBy")
   auditLogs AuditLog[]
+  segments  Segment[]  @relation("SegmentCreatedBy")
+  webhooks  Webhook[]  @relation("WebhookCreatedBy")
 
   @@index([tenantId])
   @@map("users")
@@ -105,6 +129,8 @@ model Project {
   flags        Flag[]
   apiKeys      ApiKey[]
   auditLogs    AuditLog[]
+  segments     Segment[]
+  webhooks     Webhook[]
 
   @@unique([tenantId, slug])
   @@map("projects")
@@ -153,14 +179,16 @@ model Flag {
 }
 
 model FlagEnvironment {
-  id                String   @id @default(cuid())
-  flagId            String   @map("flag_id")
-  environmentId     String   @map("environment_id")
-  enabled           Boolean  @default(false)
-  rules             Json     @default("[]")
-  rolloutPercentage Int      @default(100) @map("rollout_percentage")
-  defaultValue      Json?    @map("default_value")
-  updatedAt         DateTime @updatedAt @map("updated_at")
+  id                 String    @id @default(cuid())
+  flagId             String    @map("flag_id")
+  environmentId      String    @map("environment_id")
+  enabled            Boolean   @default(false)
+  rules              Json      @default("[]")
+  rolloutPercentage  Int       @default(100) @map("rollout_percentage")
+  defaultValue       Json?     @map("default_value")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
+  scheduledEnableAt  DateTime? @map("scheduled_enable_at")
+  scheduledDisableAt DateTime? @map("scheduled_disable_at")
 
   flag        Flag        @relation(fields: [flagId], references: [id], onDelete: Cascade)
   environment Environment @relation(fields: [environmentId], references: [id], onDelete: Cascade)
@@ -189,6 +217,43 @@ model ApiKey {
 
   @@index([projectId, environmentId])
   @@map("api_keys")
+}
+
+model Segment {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  rules       Json     @default("[]")
+  projectId   String   @map("project_id")
+  createdById String   @map("created_by_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdBy User    @relation("SegmentCreatedBy", fields: [createdById], references: [id])
+
+  @@unique([projectId, name])
+  @@map("segments")
+}
+
+model Webhook {
+  id          String         @id @default(cuid())
+  url         String
+  secret      String
+  events      WebhookEvent[]
+  active      Boolean        @default(true)
+  description String?
+  projectId   String         @map("project_id")
+  createdById String         @map("created_by_id")
+  lastStatus  Int?           @map("last_status")
+  lastError   String?        @map("last_error")
+  createdAt   DateTime       @default(now()) @map("created_at")
+  updatedAt   DateTime       @updatedAt @map("updated_at")
+
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdBy User    @relation("WebhookCreatedBy", fields: [createdById], references: [id])
+
+  @@map("webhooks")
 }
 
 model AuditLog {
@@ -220,7 +285,7 @@ model AuditLog {
 model Subscription {
   id                   String             @id @default(cuid())
   tenantId             String             @unique @map("tenant_id")
-  stripeCustomerId     String             @unique @map("stripe_customer_id")
+  stripeCustomerId     String?            @unique @map("stripe_customer_id")
   stripeSubscriptionId String?            @unique @map("stripe_subscription_id")
   stripePriceId        String?            @map("stripe_price_id")
   plan                 Plan               @default(FREE)
@@ -231,6 +296,7 @@ model Subscription {
   trialEndsAt          DateTime?          @map("trial_ends_at")
   createdAt            DateTime           @default(now()) @map("created_at")
   updatedAt            DateTime           @updatedAt @map("updated_at")
+  customRateLimit      Int?               @map("custom_rate_limit")
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
@@ -238,12 +304,12 @@ model Subscription {
 }
 
 model Usage {
-  id               String   @id @default(cuid())
-  tenantId         String   @map("tenant_id")
-  period           DateTime @db.Date
-  apiCalls         Int      @default(0) @map("api_calls")
-  flagEvaluations  Int      @default(0) @map("flag_evaluations")
-  sseConnections   Int      @default(0) @map("sse_connections")
+  id              String   @id @default(cuid())
+  tenantId        String   @map("tenant_id")
+  period          DateTime @db.Date
+  apiCalls        Int      @default(0) @map("api_calls")
+  flagEvaluations Int      @default(0) @map("flag_evaluations")
+  sseConnections  Int      @default(0) @map("sse_connections")
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 

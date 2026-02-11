@@ -3,7 +3,7 @@
 > **Audience:** Backend developer with 5+ years PHP/Laravel experience transitioning to
 > React, Next.js, Node.js, TypeScript, PostgreSQL (Prisma), and Redis.
 >
-> **Project:** Flagline — a feature-flag SaaS.
+> **Project:** Crivline — a feature-flag SaaS.
 >
 > **What this document is:** A mental-model guide. It explains *how to think* about
 > TypeScript decisions in this project — not what code to copy-paste. If you understand
@@ -101,12 +101,12 @@ cross-package imports.
 
 **Project references** (`"references": [{ "path": "../../packages/shared-types" }]`)
 are about *cross-package type checking*. They tell the TypeScript language server:
-"when I import from `@flagline/types`, here is where the source lives — jump there
+"when I import from `@crivline/types`, here is where the source lives — jump there
 for go-to-definition." Without project references, Cmd+Click on an imported type
 might land you on a generated `.d.ts` file (or nowhere), instead of the actual source.
 
 The trade-off with project references is maintenance overhead: every time you add a
-new internal dependency, you must update the `references` array. For Flagline, where
+new internal dependency, you must update the `references` array. For Crivline, where
 the dependency graph is small and stable (dashboard depends on types and db, API depends
 on types and db, SDKs depend on types), this is worth it. For a monorepo with fifty
 packages and frequent dependency changes, it becomes tedious and teams often drop it in
@@ -138,7 +138,7 @@ why. Almost always, the right move is to fix the code, not relax the config.
 
 TypeScript's `"strict": true` is a shorthand that enables a family of individual flags.
 Rather than memorizing a list, it is more useful to understand what class of bug each one
-prevents — specifically in the context of Flagline.
+prevents — specifically in the context of Crivline.
 
 ### `strictNullChecks` — The Single Most Important Flag
 
@@ -151,7 +151,7 @@ prevents — specifically in the context of Flagline.
 > `strictNullChecks` makes this a *compile-time* error in TypeScript. If a function can
 > return `null`, the type says so, and you must handle it before accessing properties.
 
-In Flagline, flag evaluation is the hot path. A flag might not exist (the customer
+In Crivline, flag evaluation is the hot path. A flag might not exist (the customer
 passed a typo as the key), might exist but be disabled, or might have no rules that
 match the current user. Without `strictNullChecks`, the evaluator could merrily access
 properties on `undefined` and return garbage to the SDK without any compiler complaint.
@@ -169,7 +169,7 @@ cannot pass it where a handler that accepts `FlagCreatedEvent` (a more specific 
 expected. Without this flag, TypeScript allows the unsafe assignment and you discover the
 mismatch at runtime.
 
-In Flagline, this matters for event handlers and webhook callbacks. The audit system emits
+In Crivline, this matters for event handlers and webhook callbacks. The audit system emits
 different event types (`FLAG_CREATED`, `RULES_UPDATED`, `MEMBER_INVITED`), each with a
 different payload shape. If you wire up a handler that expects a specific event shape to
 a generic event bus, `strictFunctionTypes` catches the mismatch before it reaches
@@ -185,7 +185,7 @@ This catches a surprisingly common mistake: forgetting to type function paramete
 In PHP, if you forget a type hint, the parameter accepts anything and you deal with it
 at runtime. TypeScript *can* behave the same way — `noImplicitAny` prevents that.
 
-For Flagline, this is particularly important in route handlers and middleware. A Fastify
+For Crivline, this is particularly important in route handlers and middleware. A Fastify
 handler receives a request object; if you forget to type the body, TypeScript infers
 `any`, and you lose all type checking on the most dangerous part of your application —
 user input.
@@ -195,7 +195,7 @@ user input.
 This is not part of `strict: true` — you must enable it separately — and it is arguably
 the most impactful flag for a feature-flag service.
 
-Here is the scenario it prevents: Flagline stores evaluation results as a
+Here is the scenario it prevents: Crivline stores evaluation results as a
 `Record<string, EvaluationResult>`. When the SDK looks up a flag by key, the type system
 (without this flag) says the result is `EvaluationResult` — definitely present, never
 undefined. But what if the key does not exist in the record? At runtime, you get
@@ -219,7 +219,7 @@ confidence about a value being present is worse than verbose code.
 ### `strictPropertyInitialization` — Catch Uninitialized Class Properties
 
 If you declare a class property with a type but do not assign it in the constructor,
-this flag catches it. In Flagline, this matters for service classes that have injected
+this flag catches it. In Crivline, this matters for service classes that have injected
 dependencies. If you add a new dependency to a service and forget to initialize it,
 the compiler tells you immediately rather than letting `undefined` flow through your
 code until it hits a method call and throws.
@@ -265,7 +265,7 @@ that takes a type `T` and returns a new type — an object with a `data` field o
 When you write `ApiResponse<FlagConfig>`, you are "calling" that function with
 `FlagConfig` as the argument.
 
-The decision process for Flagline:
+The decision process for Crivline:
 
 - You are writing the API response wrapper. Every endpoint returns `{ success, data, error }`.
   The shape is identical, but `data` varies. This is a textbook generic: you define
@@ -300,7 +300,7 @@ it is. The key insight is that checking the discriminant *narrows the type autom
 You do not need a type assertion or a cast — a regular `if` or `switch` statement is
 enough.
 
-For Flagline, discriminated unions appear everywhere:
+For Crivline, discriminated unions appear everywhere:
 
 - **Evaluation reasons.** An evaluation result has a `reason` field that is one of
   `"TARGETING_MATCH" | "DEFAULT" | "FLAG_DISABLED" | "FLAG_NOT_FOUND" | "ERROR"`. Each
@@ -333,7 +333,7 @@ certainly want a discriminated union instead. The mental note becomes a compiler
 > level, at compile time — no runtime cost.
 
 Utility types are type-level functions that transform existing types. The important ones
-for Flagline:
+for Crivline:
 
 - **`Pick<T, K>` and `Omit<T, K>`** — Select or remove fields from a type. The signal:
   you have a complete type (like the full flag model from Prisma) but you need a subset
@@ -371,7 +371,7 @@ type."
 
 **The signal that you need a type guard:** You have a value whose compile-time type is
 broad (like `unknown` or a union type) and you need to narrow it to a specific type
-based on runtime inspection. The two most common scenarios in Flagline:
+based on runtime inspection. The two most common scenarios in Crivline:
 
 1. **Validating external input.** An API request body comes in as `unknown`. You need to
    verify it matches `EvaluationContext` before using it. A type guard that checks for
@@ -392,7 +392,7 @@ not fit.
 ### Branded Types: "These Are Both Strings, But They Are Not the Same Thing"
 
 This is a pattern for preventing a specific class of mistake: passing the right *type*
-but the wrong *value*. In Flagline, a tenant ID, a project ID, a flag ID, and an
+but the wrong *value*. In Crivline, a tenant ID, a project ID, a flag ID, and an
 environment ID are all strings. TypeScript is perfectly happy if you pass a tenant ID
 where a project ID is expected — they are both `string`. The code compiles, the query
 runs with the wrong ID, and you get garbage data or a subtle security bug.
@@ -407,7 +407,7 @@ primitive type that should not be interchangeable. The more dangerous the mix-up
 across security boundaries, amounts in different currencies), the more valuable the
 branding.
 
-For Flagline, the most valuable place to brand is the multi-tenant boundary. Every
+For Crivline, the most valuable place to brand is the multi-tenant boundary. Every
 database query is scoped by tenant ID. Passing a project ID where a tenant ID is
 expected would bypass tenant isolation — the most critical security invariant in the
 system. Branding makes this mistake a compile error.
@@ -428,7 +428,7 @@ TypeScript infers `"production"` as `string` by default. If you want the type to
 the *literal* `"production"` — not any string, but specifically that one — you use
 `as const`. This gives you the same precision as an enum without defining one.
 
-For Flagline, this matters for things like evaluation reasons, flag value types, and
+For Crivline, this matters for things like evaluation reasons, flag value types, and
 plan tiers. A type like `"TARGETING_MATCH" | "DEFAULT" | "FLAG_DISABLED"` is a union
 of literal types. Each member is a specific string, not "any string." This means
 typos are compile errors, exhaustive switch statements are enforceable, and autocomplete
@@ -437,7 +437,7 @@ works in the IDE.
 The decision: use literal unions when the set of values is small, known at compile time,
 and does not need runtime iteration. Use enums when you need to iterate over the values
 at runtime (like populating a dropdown) or when the values carry meaning that benefits
-from a named constant. In Flagline, evaluation reasons and flag types are literal unions
+from a named constant. In Crivline, evaluation reasons and flag types are literal unions
 in the shared types package. Prisma enums (like `Role` and `AuditAction`) are actual
 enums because Prisma generates them that way.
 
@@ -469,7 +469,7 @@ a database JSON column, an environment variable, a Redis cache value, a webhook 
 these are all `unknown` in the honest sense. The data may or may not match the type you
 want. You must validate before you trust.
 
-In Flagline, the boundaries are:
+In Crivline, the boundaries are:
 
 1. **API request bodies.** SDK clients send evaluation contexts. Dashboard users send
    flag configurations. These are untrusted. Validate with Zod (or a similar schema
@@ -495,7 +495,7 @@ The practical pattern is: define a Zod schema that mirrors your TypeScript type,
 incoming data against it, and use the output. Zod schemas produce TypeScript types
 automatically via `z.infer<typeof schema>`, so you can avoid defining the type twice.
 
-The decision of where to put the validation is architectural. In Flagline:
+The decision of where to put the validation is architectural. In Crivline:
 
 - **Fastify route handlers** validate request bodies at the route level, before the
   request reaches the service layer. The service layer receives already-validated,
@@ -593,7 +593,7 @@ that the parent component passes a function with the right parameters.
 ### Typing Context: The Global State Contract
 
 React Context is how you share data across a component tree without passing props through
-every level. In Flagline, you would use context for things like the current tenant, the
+every level. In Crivline, you would use context for things like the current tenant, the
 current project, and the authentication state.
 
 > **Coming from Laravel:** Context is conceptually similar to singleton bindings in
@@ -672,7 +672,7 @@ The type is computed from the query. This is not something you see in the PHP wo
 where ORMs return the same model class regardless of which columns you fetched (with the
 unselected columns silently set to `null` or throwing on access).
 
-### Why This Matters for Flagline
+### Why This Matters for Crivline
 
 The flag evaluation hot path needs only a few fields: key, enabled, rules, rollout
 percentage, default value. The dashboard flag list needs different fields: name,
@@ -718,7 +718,7 @@ A DTO (Data Transfer Object) is a type that represents data in transit — betwe
 between services, or between your server and a client. The question "when to create
 DTOs" is really "when does the shape of the data change?"
 
-For Flagline, the shape changes at these boundaries:
+For Crivline, the shape changes at these boundaries:
 
 1. **Database to service layer.** Sometimes. If the service layer works directly with
    Prisma types and the query selects exactly what it needs, an extra DTO is redundant.
@@ -732,7 +732,7 @@ For Flagline, the shape changes at these boundaries:
 
 3. **API to SDK types.** Always. The SDK types are your public API. They must be
    deliberately designed, versioned, and documented. They should not reference Prisma,
-   Fastify, or any server-side concern. The `@flagline/types` package exists for this
+   Fastify, or any server-side concern. The `@crivline/types` package exists for this
    purpose.
 
 The rule of thumb: if two layers could evolve independently (database schema and API
@@ -794,7 +794,7 @@ This is the core mental model for handling untyped data in TypeScript:
    checks to determine the actual type.
 3. **Use.** After narrowing, the compiler knows the type and you can use it safely.
 
-In Flagline, this pattern appears every time you read from Redis (the cached value is a
+In Crivline, this pattern appears every time you read from Redis (the cached value is a
 JSON string that you parse to `unknown`, then validate), every time you read a JSONB
 column from PostgreSQL (Prisma gives you `JsonValue`), and every time you process a
 webhook payload.
@@ -849,7 +849,7 @@ gives you precise types but no validation that the object matches `Config`.
 `satisfies` gives you both: validation against the type and preservation of the precise
 inferred types. Think of it as a compile-time assertion that does not lose information.
 
-For Flagline, this is useful for configuration objects, lookup tables (like the mapping
+For Crivline, this is useful for configuration objects, lookup tables (like the mapping
 from plan tier to plan limits), and constant definitions where you want both precision
 and validation.
 
@@ -857,7 +857,7 @@ and validation.
 
 ## 8. Practical Thinking for This Project
 
-This section walks through the decision process for several of Flagline's core type
+This section walks through the decision process for several of Crivline's core type
 design challenges. The focus is on the thinking, not the final types — those you can
 derive once the thinking is clear.
 
@@ -900,7 +900,7 @@ The discriminated union approach means each variant carries exactly the metadata
 makes sense for it. The compiler enforces this, and consumers get precise types after
 a `switch` on the reason.
 
-**Step 4: Decide on the value type.** Flagline supports boolean, string, number, and
+**Step 4: Decide on the value type.** Crivline supports boolean, string, number, and
 JSON flags. The `value` field in the evaluation result could be typed as the union
 `boolean | string | number | Record<string, unknown>` (which is `FlagValue`), or it
 could be generic — `EvaluationResult<T extends FlagValue>` — so that the caller can
@@ -928,7 +928,7 @@ Option B is more work to define but pays for itself every time a consumer proces
 response. `if (response.success) { /* response.data is T here */ }` — the narrowing is
 automatic and complete.
 
-For Flagline, the batch evaluation endpoint is particularly important. It returns
+For Crivline, the batch evaluation endpoint is particularly important. It returns
 results for multiple flags, and some might succeed while others fail (a flag might be
 missing or errored while others evaluated correctly). The per-flag result type should
 model success and failure. The top-level response type should model the overall
@@ -957,12 +957,12 @@ The default is permissive, the override is precise.
 
 **Principle 4: Do not expose server-side concerns.** The SDK types should not import from
 Prisma, Fastify, or any server-side package. They should be self-contained in
-`@flagline/types`. If the SDK type file has an import from `@prisma/client`, something
+`@crivline/types`. If the SDK type file has an import from `@prisma/client`, something
 has gone wrong architecturally.
 
 ### Designing Audit Event Types
 
-The audit log records every significant action in Flagline. Each action has a different
+The audit log records every significant action in Crivline. Each action has a different
 shape of "before" and "after" data. A `FLAG_CREATED` event has no "before" (the flag
 did not exist) and its "after" is a flag configuration. A `RULES_UPDATED` event has a
 "before" (old rules) and "after" (new rules) that are both targeting rule arrays. A
@@ -973,7 +973,7 @@ did not exist) and its "after" is a flag configuration. A `RULES_UPDATED` event 
 1. **Can I model this as a discriminated union?** Yes — the `action` field is the
    discriminant. Each action variant specifies the types of `before` and `after`.
 
-2. **Is the union going to be huge?** Yes — Flagline has 15+ audit actions. A
+2. **Is the union going to be huge?** Yes — Crivline has 15+ audit actions. A
    discriminated union with 15 members is large but manageable. The compiler handles it
    fine. The readability cost is offset by the exhaustive checking benefit.
 
@@ -991,7 +991,7 @@ did not exist) and its "after" is a flag configuration. A `RULES_UPDATED` event 
 
 ### The Shared Types Package: What Goes Where
 
-The `@flagline/types` package should contain types that cross package boundaries. The
+The `@crivline/types` package should contain types that cross package boundaries. The
 decision for each type is: "Is this type used by more than one package?"
 
 - **`FlagConfig`, `EvaluationContext`, `EvaluationResult`**: Used by the API, the
@@ -1048,7 +1048,7 @@ API response type does not just describe the response shape — it *prevents* a 
 from returning the wrong data type. A branded ID type does not just label the parameter
 — it *makes it impossible* to pass a project ID where a tenant ID is expected.
 
-When you design a feature in Flagline, start with the types. Ask: "What are the possible
+When you design a feature in Crivline, start with the types. Ask: "What are the possible
 states? What should be impossible to represent? What should the compiler enforce?" Then
 write the types that answer those questions. The implementation follows naturally.
 

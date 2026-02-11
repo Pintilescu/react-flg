@@ -1,7 +1,7 @@
 module.exports = {
-  ...require('@flagline/config-eslint'),
+  ...require('@crivline/config-eslint'),
   extends: [
-    ...require('@flagline/config-eslint').extends,
+    ...require('@crivline/config-eslint').extends,
     'next/core-web-vitals',
   ],
 };

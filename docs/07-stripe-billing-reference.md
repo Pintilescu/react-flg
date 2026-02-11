@@ -1,6 +1,6 @@
 # 07 — Stripe Billing & SaaS Infrastructure: A Thinking Guide
 
-> **Flagline** — Feature Flag SaaS
+> **Crivline** — Feature Flag SaaS
 > Stack: React, Next.js 14+ (App Router), Node.js, TypeScript, PostgreSQL (Prisma), Redis
 > Plans: Free ($0), Starter ($15/mo), Pro ($29/mo)
 > Audience: Backend developer with 5+ years PHP/Laravel experience, transitioning to this stack
@@ -44,13 +44,13 @@ The hierarchy is: **Customer -> Subscription -> Price -> Product**.
 
 Read that bottom-up to understand what each entity *is*:
 
-- A **Product** is an abstract thing you sell. For Flagline, you have two products: "Flagline
-  Starter" and "Flagline Pro." You do not create a Product for the Free tier -- Free is the
+- A **Product** is an abstract thing you sell. For Crivline, you have two products: "Crivline
+  Starter" and "Crivline Pro." You do not create a Product for the Free tier -- Free is the
   *absence* of a paid subscription. This is an important conceptual point. Free is not a thing the
   customer buys. Free is the default state.
 
 - A **Price** is a specific way to pay for a Product. Each product typically has at least two prices:
-  monthly and annual. So "Flagline Starter" has a $15/month Price and a $150/year Price. Prices are
+  monthly and annual. So "Crivline Starter" has a $15/month Price and a $150/year Price. Prices are
   immutable once created -- if you want to change the price, you create a new Price object and
   migrate existing subscribers. This immutability is intentional: it provides an auditable pricing
   history.
@@ -59,26 +59,26 @@ Read that bottom-up to understand what each entity *is*:
   cycle dates, payment status, trial periods, and cancellation state. A subscription is the most
   complex entity in Stripe because it has a rich state machine (more on that in Section 4).
 
-- A **Customer** is a person or organization that pays you. In Flagline, this maps one-to-one with a
+- A **Customer** is a person or organization that pays you. In Crivline, this maps one-to-one with a
   Tenant (organization). One Customer, one Subscription, one Price at a time. This is the simple
   case -- some SaaS products have multiple subscriptions per customer or metered billing, but
-  Flagline does not need that complexity.
+  Crivline does not need that complexity.
 
 Read the hierarchy top-down to understand the *relationships*: a Customer has zero or one active
 Subscription. That Subscription references a Price. That Price belongs to a Product. When you want to
 know "what plan is this tenant on?", you walk this chain: Customer -> active Subscription -> Price ->
 map Price ID to plan name.
 
-### How This Maps to Flagline
+### How This Maps to Crivline
 
-| Stripe Entity | Flagline Entity | Cardinality |
+| Stripe Entity | Crivline Entity | Cardinality |
 |---|---|---|
 | Customer | Tenant (organization) | 1:1 |
 | Subscription | Tenant's current plan | 0..1 active per Tenant |
 | Price | Plan + billing interval | 4 total (Starter monthly, Starter annual, Pro monthly, Pro annual) |
 | Product | Plan tier | 2 (Starter, Pro) |
 
-The mapping is simple because Flagline has a simple billing model. You are not doing per-seat
+The mapping is simple because Crivline has a simple billing model. You are not doing per-seat
 pricing, metered billing, or usage-based billing (yet). Each tenant is on exactly one plan, billed at
 one interval. This simplicity is a feature -- resist the urge to over-engineer billing for scenarios
 you do not have.
@@ -159,7 +159,7 @@ server-only.
 
 ### The Fundamental Choice: Stripe Checkout vs. Custom Payment Form
 
-When a Flagline user decides to upgrade from Free to Starter or Pro, they need to enter payment
+When a Crivline user decides to upgrade from Free to Starter or Pro, they need to enter payment
 details. You have two paths:
 
 **Path A: Stripe Checkout (hosted).** You create a "Checkout Session" via the API, and Stripe gives
@@ -202,7 +202,7 @@ behind the scenes. You were already using Stripe Checkout in Laravel without rea
 
 The checkout flow has a specific sequence, and understanding it prevents a common mistake:
 
-1. User clicks "Upgrade to Starter" in your Flagline dashboard.
+1. User clicks "Upgrade to Starter" in your Crivline dashboard.
 2. Your frontend sends a POST to your backend (`/api/billing/checkout`).
 3. Your backend creates a Stripe Checkout Session, specifying the price, customer, success URL, and
    cancel URL.
@@ -233,7 +233,7 @@ paying. Redirect them to your pricing page. No state change needed.
 You need a Stripe Customer ID before you can create a Checkout Session (the `customer` parameter).
 The question is: when do you create this Customer object in Stripe?
 
-**Option A: Eager creation (on signup).** The moment a user creates a Flagline organization, you
+**Option A: Eager creation (on signup).** The moment a user creates a Crivline organization, you
 call `stripe.customers.create()` and store the `cus_xxx` ID on your Tenant model. Pro: you always
 have a Customer ID when you need it. Con: you create Customer objects for users who may never pay.
 If 90% of your signups stay on Free, that is 90% unnecessary Stripe API calls and orphan Customer
@@ -244,7 +244,7 @@ tries to upgrade. You check: does this Tenant already have a `stripeCustomerId`?
 If no, create one now, store it, then proceed with checkout. Pro: you only create customers for
 users who show intent to pay. Con: slightly more complex checkout code (the "get or create" pattern).
 
-**Flagline uses lazy creation.** The reasoning: for a freemium SaaS with a generous free tier, most
+**Crivline uses lazy creation.** The reasoning: for a freemium SaaS with a generous free tier, most
 users will never pay. Creating Stripe customers eagerly clutters your Stripe dashboard and makes
 analytics harder (you see thousands of customers with $0 lifetime value). Lazy creation keeps your
 Stripe data clean and meaningful.
@@ -324,7 +324,7 @@ middleware. Same concepts, one less abstraction layer.
 
 ### The Critical Events and What They Mean
 
-Not all webhook events matter equally. Here are the ones Flagline needs and the mental model for
+Not all webhook events matter equally. Here are the ones Crivline needs and the mental model for
 each:
 
 **`checkout.session.completed`** -- A customer just finished Stripe Checkout. This is where you
@@ -360,7 +360,7 @@ back).
 
 **`customer.subscription.trial_will_end`** -- Stripe sends this 3 days before a trial ends. If you
 are using Stripe-managed trials (credit card required), this is your cue to send a reminder email.
-For Flagline's no-credit-card trial, you manage trial timing yourself and this event is less
+For Crivline's no-credit-card trial, you manage trial timing yourself and this event is less
 relevant, but still good to handle.
 
 ### Idempotency: The Non-Negotiable
@@ -507,7 +507,7 @@ path.
 
 **`trialing`** -- The subscription is in a trial period. Full access to plan features. The user has
 not been charged yet but will be when the trial ends (assuming credit-card-required trial). If you
-are using a no-credit-card trial like Flagline, you manage the trial state yourself and this Stripe
+are using a no-credit-card trial like Crivline, you manage the trial state yourself and this Stripe
 status is less relevant.
 
 **`past_due`** -- A payment failed and Stripe is retrying. This is the critical state for your
@@ -543,7 +543,7 @@ not do this. Here is why:
 
 The user probably does not know their payment failed. Their card expired, or their bank flagged the
 charge, or they hit a temporary card limit. If you lock them out instantly, their experience is:
-"I was using Flagline normally, and suddenly my flags stopped working in production." That is
+"I was using Crivline normally, and suddenly my flags stopped working in production." That is
 terrifying for a developer relying on your service.
 
 Instead, give them time to fix it. A 7-day grace period is industry standard. During those 7 days:
@@ -562,7 +562,7 @@ they chose to leave). Involuntary churn is the most frustrating kind of churn be
 
 **Coming from Laravel:** Cashier provides `$user->subscription()->onGracePeriod()` which checks if
 the subscription is canceled but the billing period has not ended yet. The concept is similar, but
-Flagline's grace period is specifically about *payment failure* grace, not cancellation grace. You
+Crivline's grace period is specifically about *payment failure* grace, not cancellation grace. You
 build this logic yourself: check if status is `past_due` and the current date is within N days of
 `currentPeriodEnd`.
 
@@ -588,7 +588,7 @@ next billing cycle to get the features they just paid for.
    the Stripe Customer Portal implements by default. The user already paid for the full cycle at the
    Pro rate -- let them use what they paid for.
 
-Flagline should use option 2 for downgrades. The subscription's `cancel_at_period_end` behavior
+Crivline should use option 2 for downgrades. The subscription's `cancel_at_period_end` behavior
 (or more precisely, the schedule behavior) handles this in Stripe. The Customer Portal implements
 this out of the box if you configure it to allow plan changes.
 
@@ -602,7 +602,7 @@ the user "You are on Pro until [date], then switching to Starter" in the billing
 
 ### Two Types of Limits, Two Enforcement Strategies
 
-Flagline has two fundamentally different types of usage limits, and they require different tracking
+Crivline has two fundamentally different types of usage limits, and they require different tracking
 strategies:
 
 **Count limits** are things like "number of flags" and "number of team members." These are *stock*
@@ -681,7 +681,7 @@ PostgreSQL handles the historical, analytical storage. Each data store does what
 When a tenant hits their evaluation limit, you have a choice:
 
 **Hard limit:** Return a 429 error. The SDK evaluation call fails. The feature flag defaults to its
-fallback value (typically `false`). This is what Flagline does -- and it is the right choice for
+fallback value (typically `false`). This is what Crivline does -- and it is the right choice for
 evaluation limits because of how SDKs work. A well-built SDK handles 429s gracefully by returning
 the default value, so the end user's application does not crash. But the flag evaluations stop
 reflecting the configured state.
@@ -690,7 +690,7 @@ reflecting the configured state.
 warning in the dashboard. This is a less aggressive approach and might be appropriate for count
 limits (flags, team members) where you want to nudge rather than block.
 
-Flagline's strategy: hard limit on evaluations (429 on the API), soft limit on counts at the 80%
+Crivline's strategy: hard limit on evaluations (429 on the API), soft limit on counts at the 80%
 threshold (show a warning), hard limit on counts at 100% (prevent creation). This balances
 enforcement with good UX.
 
@@ -724,7 +724,7 @@ to paid (automatic charge when trial ends, inertia works in your favor). You get
 but a higher conversion rate. Good for products where you are confident that a trial user will find
 value.
 
-**Flagline uses no-credit-card trials.** The reasoning: feature flags are a "use it and see" kind
+**Crivline uses no-credit-card trials.** The reasoning: feature flags are a "use it and see" kind
 of product. A developer needs to integrate the SDK, create a flag, and see it work in their app
 before they understand the value. Asking for a credit card before they have done any of that kills
 activation. Get them using the product first; ask for money later.
@@ -736,19 +736,19 @@ If you choose credit-card-required trials, Stripe manages the trial for you. You
 is not charged for 14 days, the subscription status is `trialing`, and Stripe fires the
 `customer.subscription.trial_will_end` event 3 days before it ends. Clean and simple.
 
-If you choose no-credit-card trials (like Flagline), Stripe is not involved in the trial at all.
+If you choose no-credit-card trials (like Crivline), Stripe is not involved in the trial at all.
 There is no Stripe Subscription yet -- the user has not entered payment info. You manage the trial
 entirely in your own database: a `trialEndsAt` timestamp on the Tenant model, a boolean
 `isTrialing` flag, and a cron job that expires trials when the timestamp passes.
 
 The self-managed approach requires more code but gives you more control. You decide exactly when the
-trial starts, what plan the trial simulates (Flagline trials Pro), how to handle expiration (soft
+trial starts, what plan the trial simulates (Crivline trials Pro), how to handle expiration (soft
 downgrade vs. hard lockout), and how to handle re-activation (can an expired trial user get another
 trial?).
 
 ### The Trial Lifecycle
 
-The flow for Flagline's no-credit-card trial:
+The flow for Crivline's no-credit-card trial:
 
 1. **Start:** User creates an organization. Your signup flow calls a `startTrial` function that sets
    `isTrialing = true`, `trialEndsAt = now + 14 days`, and `currentPlan = PRO` on the Tenant.
@@ -802,7 +802,7 @@ Run the email sequence check as a daily cron job.
 
 **Coming from Laravel:** Laravel has Cashier trial support built in (`$user->onTrial()`,
 `$user->onGenericTrial()`). Cashier distinguishes between "subscription trials" (Stripe-managed) and
-"generic trials" (self-managed, similar to Flagline's approach). The concepts map directly.
+"generic trials" (self-managed, similar to Crivline's approach). The concepts map directly.
 
 ---
 
@@ -924,7 +924,7 @@ where you can submit evidence. But be aware that a successful chargeback means y
 
 Prevention is better: use clear billing descriptors (the text that appears on credit card statements --
 configure this in Stripe Dashboard), send receipts, and have a clear cancellation policy. If your
-billing descriptor says "FLAGLINE.DEV" instead of "STRIPE* UNKNOWN", users are less likely to
+billing descriptor says "CRIVLINE.DEV" instead of "STRIPE* UNKNOWN", users are less likely to
 dispute a charge they do not recognize.
 
 ### Subscription Changes: Immediate vs. Period End
@@ -942,7 +942,7 @@ the subscription's `schedule` object describes what will change and when. You ca
 checking if the event's subscription object shows a `pending_update` or if `cancel_at_period_end` is
 set.
 
-In practice, for Flagline, let the Customer Portal handle the UX of this and just sync whatever
+In practice, for Crivline, let the Customer Portal handle the UX of this and just sync whatever
 state Stripe reports. Your `subscription.updated` handler writes the current state of the
 subscription object to your database, regardless of whether the change was immediate or scheduled.
 
@@ -976,7 +976,7 @@ the customer again. If you want to refund *and* cancel, do both: issue the refun
 subscription.
 
 Stripe fires a `charge.refunded` event when a refund is processed. You typically do not need to
-handle this in your webhook for Flagline -- the refund is a financial operation, not a product state
+handle this in your webhook for Crivline -- the refund is a financial operation, not a product state
 change. If you cancel the subscription as part of the refund, the `customer.subscription.deleted`
 event handles the state change.
 
@@ -992,7 +992,7 @@ Create these in the Stripe Dashboard or via the API. In your Checkout Session, s
 `allow_promotion_codes: true` and Stripe shows a "Have a promo code?" input on the checkout page.
 That is all you need on the code side.
 
-The thinking: promotion codes are a Stripe feature, not a Flagline feature. You do not need to
+The thinking: promotion codes are a Stripe feature, not a Crivline feature. You do not need to
 validate codes yourself, track redemption counts yourself, or calculate discounted amounts yourself.
 Stripe does all of it. Your only decision is the discount structure.
 
@@ -1058,7 +1058,7 @@ billing on Stripe's hosted page and is redirected back to your app when done.
 via email, and hosts a page where the customer can view and pay them. You do not need to build an
 invoice viewer.
 
-The only billing UI you need to build in Flagline:
+The only billing UI you need to build in Crivline:
 
 1. **The pricing/plan selection page.** This is a marketing page, not a billing page. It shows your
    plans, their features, and "Upgrade" buttons that initiate Stripe Checkout. You need this in your
@@ -1106,15 +1106,15 @@ There are a few scenarios where Stripe's hosted experiences are not enough:
   experience. This is significantly more work and usually not worth it for launch.
 
 - **Complex pricing models.** If you have per-seat pricing, usage-based billing, or multi-product
-  subscriptions, the standard Checkout and Portal might not fully support your model. Flagline does
+  subscriptions, the standard Checkout and Portal might not fully support your model. Crivline does
   not have these, so this is not a concern.
 
-- **White-labeled billing.** If you are building Flagline for resale (white-label), the Stripe-
+- **White-labeled billing.** If you are building Crivline for resale (white-label), the Stripe-
   branded checkout and portal might not work. But this is an unlikely scenario for a developer tool.
 
-For Flagline at launch, Stripe's hosted experiences are more than sufficient. Build the minimum
+For Crivline at launch, Stripe's hosted experiences are more than sufficient. Build the minimum
 billing UI described above and spend your time on the SDK, the evaluation engine, and the dashboard
-features that make Flagline valuable.
+features that make Crivline valuable.
 
 ---
 
@@ -1157,7 +1157,7 @@ usage tracking. Wire it all together. The code is the straightforward part when 
 
 ## Appendix A: The Critical File Map
 
-When you implement billing in Flagline, you will end up with roughly this set of files:
+When you implement billing in Crivline, you will end up with roughly this set of files:
 
 ```
 src/lib/stripe.ts                    -- Stripe client singleton
@@ -1215,7 +1215,7 @@ stripe logs tail                                           -- live API request l
 
 ## Appendix D: Key Differences from Laravel Cashier
 
-| Concern | Laravel Cashier | Flagline (Raw Stripe SDK) |
+| Concern | Laravel Cashier | Crivline (Raw Stripe SDK) |
 |---|---|---|
 | Installation | `composer require laravel/cashier` | `npm install stripe` |
 | Customer creation | `$user->createAsStripeCustomer()` | `stripe.customers.create({...})` |

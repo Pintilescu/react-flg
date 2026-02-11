@@ -1,24 +1,24 @@
 'use client';
 
-import type { FlaglineClient, FlagValue } from '@flagline/js';
+import type { CrivlineClient, FlagValue } from '@crivline/js';
 import { useContext } from 'react';
 
-import { FlaglineContext } from './provider';
+import { CrivlineContext } from './provider';
 
-export function useFlagline(): FlaglineClient {
-  const client = useContext(FlaglineContext);
+export function useCrivline(): CrivlineClient {
+  const client = useContext(CrivlineContext);
   if (!client) {
-    throw new Error('useFlagline must be used within a <FlaglineProvider>');
+    throw new Error('useCrivline must be used within a <CrivlineProvider>');
   }
   return client;
 }
 
 export function useFlag<T extends FlagValue>(key: string, defaultValue: T): T {
-  const client = useFlagline();
+  const client = useCrivline();
   return client.getFlag<T>(key, defaultValue);
 }
 
 export function useFlags(): Record<string, FlagValue> {
-  const client = useFlagline();
+  const client = useCrivline();
   return client.getAllFlags();
 }

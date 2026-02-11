@@ -1,10 +1,10 @@
-import type { FlaglineConfig, FlaglineUser, FlagValue, Unsubscribe } from './types';
+import type { CrivlineConfig, CrivlineUser, FlagValue, Unsubscribe } from './types';
 
-export class FlaglineClient {
+export class CrivlineClient {
   private cache: Map<string, FlagValue> = new Map();
   private ready = false;
 
-  constructor(private readonly config: FlaglineConfig) {}
+  constructor(private readonly config: CrivlineConfig) {}
 
   async initialize(): Promise<void> {
     // TODO: fetch flags from API, open SSE connection
@@ -28,7 +28,7 @@ export class FlaglineClient {
     return () => {};
   }
 
-  async identify(_user: FlaglineUser): Promise<void> {
+  async identify(_user: CrivlineUser): Promise<void> {
     // TODO: re-evaluate flags with new user context
   }
 
@@ -36,7 +36,7 @@ export class FlaglineClient {
     this.cache.clear();
   }
 
-  getConfig(): FlaglineConfig {
+  getConfig(): CrivlineConfig {
     return this.config;
   }
 

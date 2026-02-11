@@ -1,10 +1,10 @@
-# Flagline — React Reference
+# Crivline — React Reference
 
 > **Audience**: Backend developers with 5+ years of PHP/Laravel experience transitioning to
 > React, Next.js (App Router), TypeScript, and the broader frontend ecosystem.
 >
 > This is a practical implementation reference. Every example is written in the context of
-> Flagline, our feature-flag SaaS dashboard. If you have built admin panels in Laravel Nova
+> Crivline, our feature-flag SaaS dashboard. If you have built admin panels in Laravel Nova
 > or Filament, the concepts will feel familiar — the execution is different.
 
 ---
@@ -46,7 +46,7 @@ Server Component (runs on server, no JS shipped)
   |--- passes serializable props ---> Client Component (ships JS, has interactivity)
 ```
 
-**Decision framework for Flagline:**
+**Decision framework for Crivline:**
 
 | Use a Server Component when...                 | Use a Client Component when...                   |
 |------------------------------------------------|--------------------------------------------------|
@@ -153,7 +153,7 @@ export function FlagList({ flags: initialFlags, projectId }: FlagListProps) {
 
 ### 1.2 React Context for Global State
 
-Flagline has two pieces of truly global UI state: the **current project** and the **current
+Crivline has two pieces of truly global UI state: the **current project** and the **current
 environment**. Every API call, every flag list, every audit log is scoped to these two values.
 
 > **Coming from Laravel/PHP**: This is similar to how you might store `session('current_team_id')`
@@ -163,11 +163,11 @@ environment**. Every API call, every flag list, every audit log is scoped to the
 
 **When to use Context vs URL state vs a state manager:**
 
-| Approach        | Use when...                                                         | Flagline example                               |
+| Approach        | Use when...                                                         | Crivline example                               |
 |-----------------|---------------------------------------------------------------------|-------------------------------------------------|
 | React Context   | State is read by many deeply nested components                      | Current project, current environment, theme     |
 | URL state       | State should survive refresh, be shareable, appear in browser bar   | Selected flag ID, audit log filters, pagination |
-| State manager   | Complex cross-cutting state with derived values and side effects    | Generally overkill for Flagline — avoid unless needed |
+| State manager   | Complex cross-cutting state with derived values and side effects    | Generally overkill for Crivline — avoid unless needed |
 
 ```tsx
 // providers/project-context.tsx
@@ -1446,11 +1446,11 @@ export const RuleBuilder = Object.assign(RuleBuilderRoot, {
 
 ### 2.5 Controlled vs Uncontrolled Components
 
-| Pattern         | Description                                                  | When to use in Flagline                              |
+| Pattern         | Description                                                  | When to use in Crivline                              |
 |-----------------|--------------------------------------------------------------|------------------------------------------------------|
 | Controlled      | React state is the source of truth (`value` + `onChange`)    | Flag toggle, environment switcher, search inputs     |
 | Uncontrolled    | DOM is the source of truth (accessed via `ref` on submit)    | Simple forms where you only need value on submit     |
-| React Hook Form | Hybrid — uses refs internally, exposes a controlled-style API| All Flagline forms: create flag, edit rules, settings|
+| React Hook Form | Hybrid — uses refs internally, exposes a controlled-style API| All Crivline forms: create flag, edit rules, settings|
 
 > **Coming from Laravel/PHP**: Controlled components are like Livewire's `wire:model` — every
 > keystroke syncs state. Uncontrolled is like a plain HTML form that you only read on
@@ -1776,7 +1776,7 @@ export function NavLink({
 ### 4.1 Consuming SSE Streams
 
 The `useSSE` hook (Section 1.3) provides the low-level connection. Here is how to integrate
-it with the Flagline dashboard to update flags when another user toggles a flag.
+it with the Crivline dashboard to update flags when another user toggles a flag.
 
 ```tsx
 // hooks/use-flag-updates.ts
@@ -1869,7 +1869,7 @@ The key insight: **SSE events patch the cache directly**, avoiding a full refetc
 - `invalidateQueries` -- marks cache as stale and triggers a refetch. Use after mutations
   where you want the latest server state.
 
-For Flagline, SSE events use `setQueryData` because the event payload contains the new state.
+For Crivline, SSE events use `setQueryData` because the event payload contains the new state.
 Mutations use `invalidateQueries` in `onSettled` as a safety net.
 
 ### 4.3 Using Flag Updates in a Component
@@ -1924,17 +1924,17 @@ export function FlagListWithRealtime({ projectId }: { projectId: string }) {
 
 ### 4.4 SSE vs WebSocket Trade-offs
 
-| Aspect              | SSE (Flagline's choice)                         | WebSocket                                 |
+| Aspect              | SSE (Crivline's choice)                         | WebSocket                                 |
 |---------------------|-------------------------------------------------|-------------------------------------------|
 | Direction           | Server -> Client only                           | Bidirectional                             |
 | Protocol            | Standard HTTP (works with all proxies/CDNs)     | Upgrade handshake (some proxies need config)|
 | Reconnection        | Built into the EventSource API                  | Must implement manually                   |
 | Complexity          | Simple server handler (write to response stream)| Stateful connection management            |
-| Flagline fit        | Ideal -- dashboard only receives updates        | Overkill -- dashboard does not send via WS|
+| Crivline fit        | Ideal -- dashboard only receives updates        | Overkill -- dashboard does not send via WS|
 | Scaling             | Standard HTTP load balancing                    | Sticky sessions or Redis pub/sub required |
 
-SSE is the right choice for Flagline because the dashboard only *receives* real-time updates.
-All user actions go through REST API mutations. If Flagline ever adds collaborative editing
+SSE is the right choice for Crivline because the dashboard only *receives* real-time updates.
+All user actions go through REST API mutations. If Crivline ever adds collaborative editing
 (two users editing the same rule simultaneously), WebSocket would be worth revisiting.
 
 ---
@@ -1946,7 +1946,7 @@ All user actions go through REST API mutations. If Flagline ever adds collaborat
 `React.memo` skips re-rendering when props have not changed (shallow comparison). It is
 **not** free -- it adds a comparison step to every render cycle.
 
-**When it matters in Flagline:**
+**When it matters in Crivline:**
 
 ```tsx
 // components/flags/flag-row.tsx
@@ -2159,12 +2159,12 @@ import { Flag, Settings, Users } from "lucide-react";
 ### 5.5 React DevTools Profiler
 
 1. Install the React DevTools browser extension.
-2. Open your Flagline dashboard in development mode.
+2. Open your Crivline dashboard in development mode.
 3. Navigate to the browser DevTools "Profiler" tab.
 4. Click "Record", perform an action (e.g., toggle a flag), click "Stop".
 5. The flamegraph shows every component that re-rendered and how long it took.
 
-**What to look for in Flagline:**
+**What to look for in Crivline:**
 
 - If toggling one flag causes the entire FlagList to show 50+ child re-renders, you need
   `React.memo` on `FlagRow`.
@@ -2254,7 +2254,7 @@ export class ErrorBoundary extends Component<Props, State> {
 }
 ```
 
-### 6.2 Suspense Boundaries in the Flagline Layout
+### 6.2 Suspense Boundaries in the Crivline Layout
 
 Place Suspense boundaries at the **content region** level, not around every single component.
 
@@ -3354,7 +3354,7 @@ export function APIKeyManager() {
 
 ## Summary
 
-This document covered the React architecture for the Flagline dashboard:
+This document covered the React architecture for the Crivline dashboard:
 
 - **Server vs Client Components**: Use server components for data loading and static layout;
   use client components for anything interactive. Respect the serialization boundary.
@@ -3373,5 +3373,5 @@ This document covered the React architecture for the Flagline dashboard:
 - **Error Handling**: Error boundaries at layout and widget level. Suspense boundaries for
   streaming. Skeletons for content, spinners for actions.
 
-Each pattern exists to solve a specific problem in the Flagline dashboard. Do not adopt
+Each pattern exists to solve a specific problem in the Crivline dashboard. Do not adopt
 patterns because they are "best practices" -- adopt them when you hit the problem they solve.

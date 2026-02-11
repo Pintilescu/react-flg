@@ -1,11 +1,11 @@
 # 06 — SDK Design & npm Publishing: A Thinking Guide
 
-> **Flagline** — Feature Flag SaaS
+> **Crivline** — Feature Flag SaaS
 > Stack: React, Next.js 14+ (App Router), Node.js, TypeScript, PostgreSQL (Prisma), Redis
 > Audience: Backend developer with 5+ years PHP/Laravel experience transitioning to this stack
 >
 > **Note:** This document is not a code reference. It is a thinking guide — mental models,
-> rationale, decision frameworks, and reasoning that will help you design and build the Flagline
+> rationale, decision frameworks, and reasoning that will help you design and build the Crivline
 > SDK yourself. If you want implementation details, you will write them after internalizing
 > the principles here.
 
@@ -29,7 +29,7 @@
 
 ### The SDK is the face of your product
 
-Here is the thing that is easy to miss when you are building a SaaS: most of your customers will never see your dashboard. They will see it once during setup, maybe again when they need to change a targeting rule. But they will interact with your SDK every single day. It is in their codebase. It is in their editor. It is in their build pipeline, their bundle, their production runtime. The SDK is not a secondary artifact of your product. For the developer who integrates Flagline, the SDK *is* your product.
+Here is the thing that is easy to miss when you are building a SaaS: most of your customers will never see your dashboard. They will see it once during setup, maybe again when they need to change a targeting rule. But they will interact with your SDK every single day. It is in their codebase. It is in their editor. It is in their build pipeline, their bundle, their production runtime. The SDK is not a secondary artifact of your product. For the developer who integrates Crivline, the SDK *is* your product.
 
 This changes how you think about everything. A clunky dashboard annoys people. A clunky SDK makes them rip out your service and switch to a competitor. The switching cost for a dashboard is high — you would have to recreate all your flags, targeting rules, and team permissions. The switching cost for a bad SDK is low — swap one import for another, the flag keys stay the same, and you are on LaunchDarkly by lunch.
 
@@ -47,7 +47,7 @@ Before you write a single line of SDK code, write the README first. Not the whol
 
 This is not an arbitrary number. Five minutes is roughly the threshold where a developer evaluating your product transitions from "trying it out" to "debugging it." You want them to see a flag value appear before they hit that threshold. Every additional concept they have to understand before that moment is friction. Every configuration option that is not strictly necessary for a hello-world is friction. Every import beyond the bare minimum is friction.
 
-Think about what Laravel got right with its first-run experience: `composer create-project`, edit `.env`, `php artisan migrate`, and you have a working application. The Flagline SDK should feel the same way. Install, initialize with a key, read a flag. Three steps. No intermediate concepts. No configuration files. No environment-specific setup for the hello-world case.
+Think about what Laravel got right with its first-run experience: `composer create-project`, edit `.env`, `php artisan migrate`, and you have a working application. The Crivline SDK should feel the same way. Install, initialize with a key, read a flag. Three steps. No intermediate concepts. No configuration files. No environment-specific setup for the hello-world case.
 
 The practical implication is that your SDK needs sensible defaults for everything. The base URL should default to production. Streaming should default to on. Timeouts should default to reasonable values. The only thing the developer *must* provide is their SDK key and (optionally) a user context. Everything else should work out of the box.
 
@@ -75,7 +75,7 @@ This is not hypothetical. Dependency conflicts are the most common source of pai
 
 The reasoning goes beyond compatibility. There is a supply chain security argument — every dependency is a potential attack vector (the `event-stream` incident taught the ecosystem that lesson). There is a bundle size argument — especially for client-side SDKs where every kilobyte ships to your users' browsers over the network. And there is a maintenance argument — every dependency you take on is a dependency you have to keep updated, monitor for vulnerabilities, and test against new major versions.
 
-For Flagline specifically, the only things the core SDK needs to do over the network are a single HTTP POST request and an SSE connection. Both of these are available natively in every modern JavaScript runtime via `fetch` and `EventSource`. The `fetch` API is available in all browsers, Node.js 18+, Deno, Cloudflare Workers, and every other runtime you would realistically target. There is no reason to pull in `axios`, `node-fetch`, or any HTTP library. For SSE, the browser-native `EventSource` handles connection management, reconnection, and event parsing. The only case where `EventSource` is unavailable is some edge runtimes, and for those you fall back to polling, which is just `fetch` on a timer.
+For Crivline specifically, the only things the core SDK needs to do over the network are a single HTTP POST request and an SSE connection. Both of these are available natively in every modern JavaScript runtime via `fetch` and `EventSource`. The `fetch` API is available in all browsers, Node.js 18+, Deno, Cloudflare Workers, and every other runtime you would realistically target. There is no reason to pull in `axios`, `node-fetch`, or any HTTP library. For SSE, the browser-native `EventSource` handles connection management, reconnection, and event parsing. The only case where `EventSource` is unavailable is some edge runtimes, and for those you fall back to polling, which is just `fetch` on a timer.
 
 You may also be tempted to pull in an event emitter library. Do not. A minimal event emitter is about 30 lines of code. You do not need `eventemitter3` or Node's built-in `events` module (which does not exist in browser runtimes anyway). Write the 30 lines. They will never break, they will never have a CVE, and they will never conflict with a consumer's dependency tree.
 
@@ -89,7 +89,7 @@ You may also be tempted to pull in an event emitter library. Do not. A minimal e
 
 The instinct when you are building your first SDK is to make one package that does everything. One `npm install`, one import, one set of docs. The simplicity is appealing. But this is a trap, and understanding why will change how you think about SDK architecture for any product.
 
-Flagline's SDK is consumed in fundamentally different environments:
+Crivline's SDK is consumed in fundamentally different environments:
 
 - A React single-page application running in a browser
 - A Next.js application with both server and client components
@@ -102,13 +102,13 @@ These environments share a common need — evaluate feature flags — but have v
 
 If you put everything in one package, one of two things happens. Either you force every consumer to install React as a dependency (meaning a Node.js backend developer has to install React even though they have no UI), or you make React optional and litter your code with conditional imports and runtime environment checks. The first option is wasteful and confusing. The second is fragile and creates a testing nightmare — you are now responsible for ensuring your code works correctly in every possible combination of "React present" and "React absent" across every environment.
 
-### The split: @flagline/js and @flagline/react
+### The split: @crivline/js and @crivline/react
 
 The solution is to separate the universally-needed logic from the framework-specific integrations. This is the same pattern used by every mature SDK in the ecosystem, and for good reason.
 
-`@flagline/js` is the core. It works everywhere JavaScript runs. It handles initialization, flag evaluation, caching, SSE connections, user identification, and event subscriptions. It has zero dependencies and no opinion about your UI framework. A Node.js developer can use it directly. A vanilla JavaScript developer can use it directly. A Svelte developer, a Vue developer, an Angular developer — they all use the core and write their own thin wrappers if they want framework-specific niceties.
+`@crivline/js` is the core. It works everywhere JavaScript runs. It handles initialization, flag evaluation, caching, SSE connections, user identification, and event subscriptions. It has zero dependencies and no opinion about your UI framework. A Node.js developer can use it directly. A vanilla JavaScript developer can use it directly. A Svelte developer, a Vue developer, an Angular developer — they all use the core and write their own thin wrappers if they want framework-specific niceties.
 
-`@flagline/react` is a thin wrapper around the core. It provides a React context provider and hooks that connect the core SDK to React's rendering lifecycle. It depends on `@flagline/js` as a runtime dependency and on `react` as a peer dependency. Its entire job is to make the core SDK feel native in a React application.
+`@crivline/react` is a thin wrapper around the core. It provides a React context provider and hooks that connect the core SDK to React's rendering lifecycle. It depends on `@crivline/js` as a runtime dependency and on `react` as a peer dependency. Its entire job is to make the core SDK feel native in a React application.
 
 "Thin wrapper" is not a vague aspiration here — it is a measurable constraint. The React package should contain almost no logic of its own. The provider initializes the core client and puts it in context. The `useFlag` hook reads from the core client and subscribes to changes. The `useFlags` hook does the same for all flags. That is essentially the entire package. If you find yourself putting evaluation logic, network logic, caching logic, or retry logic in the React package, something has gone wrong. That logic belongs in the core. The React package is plumbing between two systems (your SDK's event model and React's state model), not a second SDK.
 
@@ -116,7 +116,7 @@ A good litmus test: if you deleted the React package entirely and rewrote it fro
 
 ### How to think about the dependency graph
 
-Picture it as a pyramid. At the bottom is `@flagline/js`, which depends on nothing. On top of it sits `@flagline/react`, which depends on the core. If you later build a Vue wrapper, it would be `@flagline/vue`, also depending on the core. Each framework wrapper is a peer of the others — they never depend on one another — all rooted in the same core.
+Picture it as a pyramid. At the bottom is `@crivline/js`, which depends on nothing. On top of it sits `@crivline/react`, which depends on the core. If you later build a Vue wrapper, it would be `@crivline/vue`, also depending on the core. Each framework wrapper is a peer of the others — they never depend on one another — all rooted in the same core.
 
 This architecture gives you three important properties.
 
@@ -130,17 +130,17 @@ Third, you can version and release the packages independently. A bug fix in the 
 
 This is similar to how Symfony components work in the PHP world. `symfony/http-foundation` is the core that handles HTTP messages. `symfony/http-kernel` builds on it to handle request/response cycles. `laravel/framework` wraps Symfony components with Laravel-specific features like facades and Eloquent. Each layer adds framework opinion on top of framework-agnostic infrastructure.
 
-Or think of `league/flysystem`. The core package defines the filesystem interface and common logic. Then there are adapter packages: `league/flysystem-aws-s3-v3` for S3, `league/flysystem-local` for local disk, `league/flysystem-ftp` for FTP. Each adapter depends on the core but not on the other adapters. Your Flagline React package is conceptually the same thing — it adapts the core SDK to a specific environment (React's rendering model).
+Or think of `league/flysystem`. The core package defines the filesystem interface and common logic. Then there are adapter packages: `league/flysystem-aws-s3-v3` for S3, `league/flysystem-local` for local disk, `league/flysystem-ftp` for FTP. Each adapter depends on the core but not on the other adapters. Your Crivline React package is conceptually the same thing — it adapts the core SDK to a specific environment (React's rendering model).
 
 ### Real-world precedents
 
-This is not a pattern Flagline is inventing. It is the industry standard for developer-facing SDKs:
+This is not a pattern Crivline is inventing. It is the industry standard for developer-facing SDKs:
 
 **Stripe** ships `@stripe/stripe-js` (core, loads Stripe.js) and `@stripe/react-stripe-js` (React Elements wrapper). The React package is a thin layer of hooks and components around the core Stripe.js functionality.
 
 **Sentry** ships `@sentry/browser` (core browser SDK), `@sentry/react` (React-specific error boundaries, hooks, and profiler integration), and `@sentry/node` (Node.js-specific transport and integrations). All are built on `@sentry/core`, which contains the shared logic.
 
-**LaunchDarkly** (the most direct competitor to Flagline) ships `launchdarkly-js-client-sdk` (core JavaScript client) and `launchdarkly-react-client-sdk` (React wrapper with hooks and a provider). The React wrapper is thin and delegates all evaluation to the core.
+**LaunchDarkly** (the most direct competitor to Crivline) ships `launchdarkly-js-client-sdk` (core JavaScript client) and `launchdarkly-react-client-sdk` (React wrapper with hooks and a provider). The React wrapper is thin and delegates all evaluation to the core.
 
 **PostHog** ships `posthog-js` (core analytics/feature-flags) plus separate wrappers for React, Next.js, and other frameworks.
 
@@ -152,7 +152,7 @@ When you see the same architecture across every major developer tools company, i
 
 ### The initialize pattern: factory function over constructor
 
-When a developer first uses your SDK, they need to initialize it. There are two common approaches: a class constructor (`new FlaglineClient(config)`) or a factory function (`initialize(config)`). Flagline uses a factory function, and the reasoning is worth understanding deeply because it affects the entire developer experience.
+When a developer first uses your SDK, they need to initialize it. There are two common approaches: a class constructor (`new CrivlineClient(config)`) or a factory function (`initialize(config)`). Crivline uses a factory function, and the reasoning is worth understanding deeply because it affects the entire developer experience.
 
 Initialization is inherently asynchronous. The SDK needs to fetch the current flag values from the server before it can evaluate anything meaningfully. A constructor in JavaScript is always synchronous — you cannot `await` inside a constructor. If you use a constructor, the developer creates the client and then has to call a separate `.init()` method, or listen for a `ready` event, or check an `.isReady()` boolean before they can safely use it. This two-step dance is a constant source of bugs. Developers forget the second step, or they call `getFlag` before initialization completes and wonder why they always get default values.
 
@@ -230,11 +230,11 @@ When a developer calls the `initialize` function, a specific sequence of events 
 
 **Step 1: Validate configuration.** Check that an SDK key is present, that it matches the expected format (starts with `fl_live_` or `fl_test_`), that any provided options have sane values (polling interval is not set to 100ms, for example). Fail fast with a clear, actionable error message if something is wrong. This is the one place where throwing an error is appropriate — the developer is actively setting up the SDK and needs immediate feedback about misconfiguration. An error here, during development, saves hours of debugging later.
 
-**Step 2: Fetch all flags.** Make a single HTTP request to the Flagline API to get the current flag values for this environment. One request, not one per flag. This is a critical design decision worth emphasizing. If you have 50 flags, you do not want 50 HTTP requests during initialization. You want one request that returns everything. The server already knows which flags exist for this environment key — let it do the work of collecting and returning them all. The request includes the user context if one was provided during initialization, so the server evaluates targeting rules server-side and returns resolved values.
+**Step 2: Fetch all flags.** Make a single HTTP request to the Crivline API to get the current flag values for this environment. One request, not one per flag. This is a critical design decision worth emphasizing. If you have 50 flags, you do not want 50 HTTP requests during initialization. You want one request that returns everything. The server already knows which flags exist for this environment key — let it do the work of collecting and returning them all. The request includes the user context if one was provided during initialization, so the server evaluates targeting rules server-side and returns resolved values.
 
 **Step 3: Populate the in-memory cache.** The flag values from the server response go into a plain JavaScript `Map` (or a plain object, but `Map` has better performance characteristics for frequent reads). This is the cache that `getFlag` reads from. It is intentionally simple — no TTLs, no eviction policies, no LRU logic, no serialization to disk. Flag values are small (a boolean, a string, a number, occasionally a small JSON object) and few (most projects have tens or hundreds of flags, not thousands). Keeping them all in memory is trivial. Overengineering the cache is a common mistake — you are caching kilobytes, not gigabytes.
 
-**Step 4: Open the SSE connection.** Start a Server-Sent Events connection to the Flagline streaming endpoint. This is a long-lived HTTP connection that the server pushes events through when flag values change. The SSE connection is the real-time update channel — it is how the SDK learns about flag changes without polling.
+**Step 4: Open the SSE connection.** Start a Server-Sent Events connection to the Crivline streaming endpoint. This is a long-lived HTTP connection that the server pushes events through when flag values change. The SSE connection is the real-time update channel — it is how the SDK learns about flag changes without polling.
 
 **Step 5: Emit "ready" and return.** The factory function resolves its promise, returning the client to the developer. At this point, the client has current flag values and a live connection for updates. The developer can immediately start calling `getFlag`.
 
@@ -268,7 +268,7 @@ The cache also provides an implicit offline mode. If the network drops entirely,
 
 Server-Sent Events are a deliberately simple protocol built on HTTP. The client opens a long-lived GET request. The server holds the connection open and sends text events whenever it has data to push. If the connection drops, the browser's built-in `EventSource` API automatically reconnects.
 
-For Flagline's use case, SSE is ideal for several reasons. The communication is one-directional — only the server sends data to the client. The events are small — a flag key and its new value, typically less than 100 bytes. The protocol handles reconnection natively with built-in exponential backoff. And unlike WebSockets, SSE works through most corporate proxies and load balancers without special configuration, because it is just a long-lived HTTP response.
+For Crivline's use case, SSE is ideal for several reasons. The communication is one-directional — only the server sends data to the client. The events are small — a flag key and its new value, typically less than 100 bytes. The protocol handles reconnection natively with built-in exponential backoff. And unlike WebSockets, SSE works through most corporate proxies and load balancers without special configuration, because it is just a long-lived HTTP response.
 
 The SDK listens for a few event types on the SSE connection: a flag value changed, a flag was deleted, and a bulk refresh (typically sent after an `identify` call when the server has re-evaluated all flags for the new user). Each event triggers the appropriate cache update and subscriber notification.
 
@@ -294,7 +294,7 @@ In practice, the resilience principle manifests as a cascade of fallbacks:
 4. If the developer did not provide defaults, return the default value passed to `getFlag`.
 5. If something truly unexpected happens internally, log a warning and continue. Never throw.
 
-At every level of this cascade, the application keeps working. The quality of service degrades (less fresh data, less real-time), but it never drops to zero. The developer should be able to wrap their entire application in the Flagline SDK and have zero risk of the SDK being the cause of a production incident.
+At every level of this cascade, the application keeps working. The quality of service degrades (less fresh data, less real-time), but it never drops to zero. The developer should be able to wrap their entire application in the Crivline SDK and have zero risk of the SDK being the cause of a production incident.
 
 There is a practical testing implication here too: your SDK test suite should include tests for every failure mode. SSE connection refused, SSE connection dropped mid-stream, HTTP 500 from the flag endpoint, malformed JSON in the response, network timeout, `EventSource` constructor throwing, `localStorage` being unavailable, callbacks throwing exceptions. Each of these should result in graceful degradation, not a crash.
 
@@ -322,9 +322,9 @@ These two problems — reactivity and cleanup — are why every SDK that targets
 
 The Provider pattern solves the same problem that Laravel's service container solves: making a shared resource available to any code that needs it without passing it explicitly through every intermediate layer.
 
-In Laravel, you register a singleton in a service provider: `$this->app->singleton(FlaglineClient::class, ...)`. Any controller, middleware, or service can then inject it via the constructor or resolve it with `app(FlaglineClient::class)`. You do not pass the client from the HTTP kernel to the middleware to the controller to the service — the container makes it available everywhere.
+In Laravel, you register a singleton in a service provider: `$this->app->singleton(CrivlineClient::class, ...)`. Any controller, middleware, or service can then inject it via the constructor or resolve it with `app(CrivlineClient::class)`. You do not pass the client from the HTTP kernel to the middleware to the controller to the service — the container makes it available everywhere.
 
-In React, the equivalent mechanism is Context. You create a context, wrap your component tree in a Provider that holds the value, and any descendant component can access it via a hook. The Flagline provider wraps the app root (or the relevant subtree), and any component anywhere in the tree can call `useFlag` to access flags without receiving them as props through every intermediate component.
+In React, the equivalent mechanism is Context. You create a context, wrap your component tree in a Provider that holds the value, and any descendant component can access it via a hook. The Crivline provider wraps the app root (or the relevant subtree), and any component anywhere in the tree can call `useFlag` to access flags without receiving them as props through every intermediate component.
 
 The provider has two responsibilities. First, it initializes the core SDK client once, at mount time. It receives the config as props, calls the factory function, and holds the resulting client in a ref. This means initialization happens once per application lifecycle, not once per component that needs a flag. Second, it manages cleanup — when the provider unmounts, it calls `destroy()` on the client, preventing resource leaks. In development mode with React Strict Mode (which mounts and unmounts components twice to help you catch cleanup bugs), this is especially important. Your provider needs to handle the mount-unmount-remount cycle gracefully.
 
@@ -332,7 +332,7 @@ The provider has two responsibilities. First, it initializes the core SDK client
 
 When a component calls `useFlag('dark-mode', false)`, the following sequence happens, and each step exists for a specific reason:
 
-The hook reads the Flagline client from context. It calls `getFlag` on the client to get the current cached value and stores it in React state via `useState`. It sets up a subscription via `useEffect` that listens for changes to that specific flag key. When the flag changes (due to an SSE event, a polling update, or an `identify` call), the subscriber callback fires and calls `setState` with the new value. React detects the state change and re-renders the component. When the component unmounts, the `useEffect` cleanup function runs the unsubscribe function.
+The hook reads the Crivline client from context. It calls `getFlag` on the client to get the current cached value and stores it in React state via `useState`. It sets up a subscription via `useEffect` that listens for changes to that specific flag key. When the flag changes (due to an SSE event, a polling update, or an `identify` call), the subscriber callback fires and calls `setState` with the new value. React detects the state change and re-renders the component. When the component unmounts, the `useEffect` cleanup function runs the unsubscribe function.
 
 The hook does *not* make network requests. It does *not* manage caching. It does *not* evaluate targeting rules. All of that is in the core SDK. The hook is pure plumbing — read from core, subscribe to changes, update React state when notified, clean up on unmount. This is what "thin wrapper" means in concrete terms.
 
@@ -348,7 +348,7 @@ The SDK faces a fundamental tension. On the server, there is no SSE connection. 
 
 The way to think about this is in two distinct layers.
 
-**Server layer:** On the server (in a Server Component or a layout's data-fetching logic), you fetch the flag values directly. This could be a plain `fetch` call to the Flagline API, or it could be a direct Redis read if your API server has access to the same Redis cache that the flag evaluation service uses. The point is: this is server-to-server communication, fast and direct. You pass the resulting flag values down to the client component as props or through a server-side data channel.
+**Server layer:** On the server (in a Server Component or a layout's data-fetching logic), you fetch the flag values directly. This could be a plain `fetch` call to the Crivline API, or it could be a direct Redis read if your API server has access to the same Redis cache that the flag evaluation service uses. The point is: this is server-to-server communication, fast and direct. You pass the resulting flag values down to the client component as props or through a server-side data channel.
 
 **Client layer:** On the client, the provider initializes with these server-fetched values as its *initial state*. This is the crucial piece. The provider does not start with an empty cache and then fill it from the network — it starts with the server-provided values and renders immediately with them. There is no loading state. There is no flash of wrong content. The page arrives with the correct flag values baked into the HTML.
 
@@ -388,7 +388,7 @@ Export every type that a consumer might conceivably need to reference. The rule 
 
 For a feature flag SDK, a reasonable set of type exports includes: the client class or interface, the configuration options type, the user context type, the flag value union type, the error type, the change event type, and the unsubscribe function type. A developer might need any of these when declaring variables, function parameters, or component props that interact with the SDK.
 
-A common mistake is to export only the "main" types and leave utility types internal. If your error type is not exported, a developer who wants to type an error handler callback has to use `(error: unknown) => void` instead of `(error: FlaglineError) => void`. They lose the ability to access `.code` and `.message` without a type assertion. Export everything. It costs nothing.
+A common mistake is to export only the "main" types and leave utility types internal. If your error type is not exported, a developer who wants to type an error handler callback has to use `(error: unknown) => void` instead of `(error: CrivlineError) => void`. They lose the ability to access `.code` and `.message` without a type assertion. Export everything. It costs nothing.
 
 ### Module augmentation for custom user attributes
 
@@ -396,7 +396,7 @@ Your SDK accepts a user context object for targeting. This object has some stand
 
 The base approach is to accept `custom: Record<string, string | number | boolean>`. This works for everyone but provides no type safety on the custom attributes themselves. A developer can pass `{ teamSize: "not a number" }` and TypeScript will not catch it.
 
-TypeScript's module augmentation (declaration merging) lets power users extend an interface from your package without modifying your code. You define a `FlaglineUserCustomAttributes` interface in your SDK as an empty interface. The consumer, in their own codebase, creates a `.d.ts` file that augments the module and adds their specific fields to that interface. Now TypeScript validates their custom attributes against their declared schema.
+TypeScript's module augmentation (declaration merging) lets power users extend an interface from your package without modifying your code. You define a `CrivlineUserCustomAttributes` interface in your SDK as an empty interface. The consumer, in their own codebase, creates a `.d.ts` file that augments the module and adds their specific fields to that interface. Now TypeScript validates their custom attributes against their declared schema.
 
 This is an advanced feature, and it should absolutely not be required for basic usage. The base type works without augmentation. Module augmentation is a power-user feature for teams that want an extra layer of type safety on their targeting attributes. Document it, but do not make people feel they need to understand it to use your SDK.
 
@@ -456,7 +456,7 @@ You can declare your package as side-effect-free in `package.json` with `"sideEf
 
 For a server-side package, bundle size is largely irrelevant — the code runs on a machine with gigabytes of memory and no network transfer to the end user. For a client-side SDK, bundle size directly affects your customers' users. Every kilobyte of your SDK is a kilobyte that every user of every application that integrates your SDK downloads on every page load (or at least on their first visit before caching kicks in).
 
-This is why established client-side SDKs obsess over bundle size and publish their gzipped size prominently. It is a competitive metric. LaunchDarkly's client SDK is around 20KB gzipped. If Flagline can deliver the same functionality in 5KB gzipped, that is a meaningful selling point for performance-conscious teams.
+This is why established client-side SDKs obsess over bundle size and publish their gzipped size prominently. It is a competitive metric. LaunchDarkly's client SDK is around 20KB gzipped. If Crivline can deliver the same functionality in 5KB gzipped, that is a meaningful selling point for performance-conscious teams.
 
 Establish a bundle size budget early and enforce it in CI. A tool like `size-limit` can fail your CI build if the bundle exceeds your budget. This prevents accidental growth — a single `import { format } from 'date-fns'` at the wrong level can add 20KB to your bundle without anyone noticing until a customer complains about their Lighthouse score dropping.
 
@@ -468,7 +468,7 @@ When your React package imports from `react`, that import should not be resolved
 
 Instead, React is declared as a *peer dependency*. A peer dependency is a contract that says: "I need this to work, but I expect the consumer to provide it. Do not install it on my behalf." The consumer's copy of React is used at runtime. Your package just imports from `react` and trusts it will be available in the consumer's `node_modules`.
 
-In your build configuration, this means React must be "externalized" — the bundler sees `import { useState } from 'react'` and leaves it as-is rather than following the import and inlining React's source. The same applies to `react-dom` and to `@flagline/js` when building the React wrapper. Anything that the consumer provides should be external.
+In your build configuration, this means React must be "externalized" — the bundler sees `import { useState } from 'react'` and leaves it as-is rather than following the import and inlining React's source. The same applies to `react-dom` and to `@crivline/js` when building the React wrapper. Anything that the consumer provides should be external.
 
 The rule of thumb: if your consumer is expected to have this dependency installed independently, it is a peer dependency and should be externalized. If it is an internal implementation detail that the consumer has no reason to install or know about, it should be bundled (or, ideally, written inline to avoid dependencies entirely).
 
@@ -492,13 +492,13 @@ This means what you publish to npm is not necessarily what is in your Git repo. 
 
 Not every field in `package.json` affects your published package's behavior. These are the ones that directly determine whether consumers can use your package correctly:
 
-**`name`** is what consumers type in `npm install`. For Flagline, this is `@flagline/js` and `@flagline/react`.
+**`name`** is what consumers type in `npm install`. For Crivline, this is `@crivline/js` and `@crivline/react`.
 
 **`version`** follows semver. The registry rejects duplicate versions — once `1.0.0` is published, it is immutable. You cannot overwrite it, only unpublish it (within a limited time window and with restrictions).
 
-**`main`** tells Node.js and older tools which file to load when someone calls `require('@flagline/js')`. It points to your CJS build output.
+**`main`** tells Node.js and older tools which file to load when someone calls `require('@crivline/js')`. It points to your CJS build output.
 
-**`module`** tells ESM-aware bundlers (Vite, webpack, Rollup) which file to load when someone writes `import ... from '@flagline/js'`. It points to your ESM build output. This is a de facto standard, not part of the Node.js specification, but it is understood by every major bundler.
+**`module`** tells ESM-aware bundlers (Vite, webpack, Rollup) which file to load when someone writes `import ... from '@crivline/js'`. It points to your ESM build output. This is a de facto standard, not part of the Node.js specification, but it is understood by every major bundler.
 
 **`types`** tells TypeScript where to find type declarations. Without this, TypeScript consumers get no autocomplete, no type checking, no hover tooltips — your SDK becomes effectively untyped for them.
 
@@ -508,19 +508,19 @@ One important detail in the `exports` map: the `types` condition must come befor
 
 **`files`** is an allowlist of files and directories to include in the published tarball. It is the npm equivalent of a `.gitignore` in reverse — instead of listing what to exclude, you list what to include. Typically `["dist", "README.md", "LICENSE"]`. Without a `files` field, npm includes almost everything in your directory, which means source code, test files, configuration files, and potentially sensitive files like `.env` end up in your published package where anyone can see them.
 
-**`peerDependencies`** lists packages that the consumer must provide. For `@flagline/react`, this includes `react` and `@flagline/js`.
+**`peerDependencies`** lists packages that the consumer must provide. For `@crivline/react`, this includes `react` and `@crivline/js`.
 
 **`sideEffects`** tells bundlers whether your package code can be safely tree-shaken. Set to `false` to enable maximum tree-shaking.
 
 ### Scoped packages and why they matter
 
-In npm, a scope is a namespace prefix: `@flagline/js` instead of `flagline-js`. Using a scope is a deliberate choice with several benefits.
+In npm, a scope is a namespace prefix: `@crivline/js` instead of `crivline-js`. Using a scope is a deliberate choice with several benefits.
 
-Scopes give you a protected namespace. Once you claim the `@flagline` scope (by creating an npm organization named `flagline`), nobody else can publish packages under that scope. You can publish `@flagline/js`, `@flagline/react`, `@flagline/node`, and `@flagline/vue` knowing they will never collide with someone else's package.
+Scopes give you a protected namespace. Once you claim the `@crivline` scope (by creating an npm organization named `crivline`), nobody else can publish packages under that scope. You can publish `@crivline/js`, `@crivline/react`, `@crivline/node`, and `@crivline/vue` knowing they will never collide with someone else's package.
 
-Scopes communicate provenance. When a developer sees `@flagline/react` in their `package.json`, they know it is an official Flagline package. When they see `flagline-react`, it could be anyone — an official package, a community wrapper, or a malicious typosquat. The scope is a trust signal.
+Scopes communicate provenance. When a developer sees `@crivline/react` in their `package.json`, they know it is an official Crivline package. When they see `crivline-react`, it could be anyone — an official package, a community wrapper, or a malicious typosquat. The scope is a trust signal.
 
-Scopes group packages visually. In the npm registry UI, in `node_modules`, in `package.json` — all official Flagline packages appear together under the `@flagline/` prefix, making it easy to identify the Flagline-related parts of a project's dependency tree.
+Scopes group packages visually. In the npm registry UI, in `node_modules`, in `package.json` — all official Crivline packages appear together under the `@crivline/` prefix, making it easy to identify the Crivline-related parts of a project's dependency tree.
 
 One practical detail: scoped packages on npm default to private access (you need a paid org plan to publish private packages). For a public SDK, you need to either pass `--access public` on the first publish or set `"publishConfig": { "access": "public" }` in your `package.json`. After the first publish, npm remembers the access level.
 
@@ -571,7 +571,7 @@ The typical CI flow is: a developer merges a PR to main, the CI workflow detects
 
 Before committing to a `1.0.0` release, you want real users to try your SDK in real applications. npm supports pre-release versions: `1.0.0-beta.1`, `1.0.0-rc.1`, and so on. These follow semver's pre-release convention and are not installed by default — a developer must explicitly request them.
 
-You publish pre-releases on a separate npm dist-tag (like `beta` or `next`). Dist-tags are mutable pointers to specific versions. The `latest` tag always points to the most recent stable release. The `beta` tag points to the most recent pre-release. `npm install @flagline/js` gives the `latest` tag. `npm install @flagline/js@beta` gives the `beta` tag.
+You publish pre-releases on a separate npm dist-tag (like `beta` or `next`). Dist-tags are mutable pointers to specific versions. The `latest` tag always points to the most recent stable release. The `beta` tag points to the most recent pre-release. `npm install @crivline/js` gives the `latest` tag. `npm install @crivline/js@beta` gives the `beta` tag.
 
 Use pre-releases to validate your API design with early adopters before locking it in. The transition from `0.x` or beta to `1.0.0` is significant — once you publish a stable `1.0.0`, you are bound by semver to maintain backward compatibility until `2.0.0`. Pre-releases are your chance to iterate freely on the API, discover awkward patterns, and fix them without worrying about breaking changes.
 
@@ -587,7 +587,7 @@ More developers will read your README than will visit your documentation website
 
 The structure of an effective SDK README follows a consistent pattern that has been refined across thousands of successful developer tools:
 
-**Opening line.** One sentence that explains what this is and who it is for. Not a mission statement. Not a paragraph. One sentence. "The official Flagline SDK for JavaScript. Evaluate feature flags in any JS runtime with zero dependencies."
+**Opening line.** One sentence that explains what this is and who it is for. Not a mission statement. Not a paragraph. One sentence. "The official Crivline SDK for JavaScript. Evaluate feature flags in any JS runtime with zero dependencies."
 
 **Badges.** npm version, bundle size, build status. These communicate professionalism and health at a glance. A developer who sees a green build badge and a "3.2KB gzipped" badge has already formed a positive impression before reading a word of documentation.
 
@@ -597,13 +597,13 @@ The structure of an effective SDK README follows a consistent pattern that has b
 
 **API reference.** Every public method with its signature, parameters, and a brief description. This can be compact — a couple of lines per method. Detailed explanations and edge cases go in full documentation, not the README.
 
-**Framework links.** If someone found `@flagline/js` but actually wants the React wrapper, make it one click to get there. "Using React? See `@flagline/react`."
+**Framework links.** If someone found `@crivline/js` but actually wants the React wrapper, make it one click to get there. "Using React? See `@crivline/react`."
 
 ### Every code example must be copy-pasteable
 
 This cannot be overstated, because it is the single most common failure mode in SDK documentation: code examples that do not work when copied and pasted.
 
-Every example should include its import statements. Do not assume the reader knows where `FlaglineProvider` is imported from — write the import line. Every example should use realistic but obviously fake values for API keys — `fl_live_your_key_here`, not `YOUR_KEY` (which looks like a placeholder the developer is supposed to leave as-is) and not a real key (which is a security problem). Every example should be self-contained. If it depends on setup from a previous example, repeat the setup or link to it explicitly.
+Every example should include its import statements. Do not assume the reader knows where `CrivlineProvider` is imported from — write the import line. Every example should use realistic but obviously fake values for API keys — `fl_live_your_key_here`, not `YOUR_KEY` (which looks like a placeholder the developer is supposed to leave as-is) and not a real key (which is a security problem). Every example should be self-contained. If it depends on setup from a previous example, repeat the setup or link to it explicitly.
 
 If an example requires running code that was shown earlier (initializing the client, for instance), either include the initialization in the example or clearly state what the prerequisite is. "Assumes you have initialized `client` as shown in Quick Start above" is acceptable. No mention of the prerequisite at all is not.
 

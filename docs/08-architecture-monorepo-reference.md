@@ -3,7 +3,7 @@
 > **Audience:** Backend developer with 5+ years PHP/Laravel experience moving into
 > React, Next.js, Node.js, TypeScript, PostgreSQL (Prisma), and Redis.
 >
-> **Project:** Flagline -- a feature-flag SaaS.
+> **Project:** Crivline -- a feature-flag SaaS.
 >
 > **What this document is:** A thinking guide. Mental models, rationale, decision
 > frameworks, and reasoning that helps you set up and understand the monorepo
@@ -36,7 +36,7 @@
 
 ### The Problem Stated Simply
 
-Flagline ships five distinct pieces of software: a dashboard (Next.js), an
+Crivline ships five distinct pieces of software: a dashboard (Next.js), an
 evaluation API (Fastify), a JavaScript SDK, a React SDK, and shared
 infrastructure like types and the database client. In the Laravel world, you
 would probably put each of these in its own repository. You would publish the
@@ -114,7 +114,7 @@ trades that simplicity for the ability to manage multiple projects as a
 coordinated whole. The question is whether the coordination benefits outweigh
 the tooling overhead.
 
-For Flagline, they do. You have an API and a dashboard that share a database
+For Crivline, they do. You have an API and a dashboard that share a database
 client and type definitions. You have two SDKs that need to stay in sync with
 the API they call. These are not independent projects -- they are tightly
 coupled by shared contracts. A monorepo reflects that reality in the repository
@@ -135,7 +135,7 @@ it, and you end up with the worst of both worlds -- the complexity of a
 monorepo with the isolation of separate repos.
 
 For a team of one to five developers building a product with tightly coupled
-pieces (like Flagline), a monorepo is almost always the right call. For a
+pieces (like Crivline), a monorepo is almost always the right call. For a
 large organization with 50 teams building unrelated services, the calculus is
 different and usually points toward a polyrepo strategy with a shared package
 registry.
@@ -259,9 +259,9 @@ configurations.
 > any first-party Composer packages -- these are the libraries that the entry
 > points use.
 
-### The Flagline Workspace Map
+### The Crivline Workspace Map
 
-For Flagline, the split looks like this:
+For Crivline, the split looks like this:
 
 **Apps (deployable):**
 - `apps/dashboard` -- Next.js App Router, deployed to Vercel. This is the SaaS
@@ -270,9 +270,9 @@ For Flagline, the split looks like this:
   endpoint that customer SDKs call to get flag values.
 
 **Packages (importable, published to npm):**
-- `packages/sdk-js` -- The core JavaScript SDK (`@flagline/js`). Customers
+- `packages/sdk-js` -- The core JavaScript SDK (`@crivline/js`). Customers
   install this in their Node.js or browser applications.
-- `packages/sdk-react` -- The React SDK (`@flagline/react`). Wraps `sdk-js`
+- `packages/sdk-react` -- The React SDK (`@crivline/react`). Wraps `sdk-js`
   with React hooks and a context provider.
 
 **Packages (importable, internal only):**
@@ -374,7 +374,7 @@ boundary. Specifically:
 
 - **Database model types.** The Prisma-generated types live in the `db`
   package. They describe the database schema, not the API contract. The
-  dashboard and API import Prisma types from `@flagline/db`, not from
+  dashboard and API import Prisma types from `@crivline/db`, not from
   `shared-types`. The distinction matters because database schemas and API
   contracts evolve independently -- you might add a database column that is
   never exposed through the API.
@@ -394,8 +394,8 @@ from both apps.
 
 The `db` package exports two things: the Prisma client instance (configured as a
 singleton to avoid exhausting connection pools during hot reload) and the
-generated Prisma types. Any app that lists `"@flagline/db": "workspace:*"` in
-its dependencies can `import { prisma } from "@flagline/db"` and get a
+generated Prisma types. Any app that lists `"@crivline/db": "workspace:*"` in
+its dependencies can `import { prisma } from "@crivline/db"` and get a
 fully typed database client.
 
 > **Coming from Laravel:** The `db` package is like having a dedicated
@@ -406,18 +406,18 @@ fully typed database client.
 
 ### How the Workspace Protocol Wires Things Together
 
-When the dashboard's `package.json` lists `"@flagline/types": "workspace:*"`,
+When the dashboard's `package.json` lists `"@crivline/types": "workspace:*"`,
 pnpm does not look for that package on npm. The `workspace:*` protocol tells
 pnpm to resolve the dependency from the monorepo itself. Under the hood, pnpm
-creates a symlink from `apps/dashboard/node_modules/@flagline/types` to
+creates a symlink from `apps/dashboard/node_modules/@crivline/types` to
 `packages/shared-types/`. Imports resolve to the actual source directory, not to
 a published tarball.
 
 The `*` means "any version." For internal packages that are never published to
 npm, the version in their `package.json` is irrelevant. For published packages
 like the SDKs, `workspace:*` is automatically replaced with the actual version
-when you publish. So `"@flagline/js": "workspace:*"` in `sdk-react` becomes
-`"@flagline/js": "^0.1.0"` in the published npm tarball.
+when you publish. So `"@crivline/js": "workspace:*"` in `sdk-react` becomes
+`"@crivline/js": "^0.1.0"` in the published npm tarball.
 
 This is the mechanism that makes the monorepo's shared code feel like local
 code. There is no publish step, no version bump, no waiting for a registry.
@@ -426,7 +426,7 @@ You change a type, save the file, and every consumer sees it immediately.
 ### The Dependency Graph
 
 Understanding the dependency graph is essential for reasoning about build order,
-cache invalidation, and the blast radius of changes. For Flagline, it looks
+cache invalidation, and the blast radius of changes. For Crivline, it looks
 like this:
 
 ```
@@ -466,7 +466,7 @@ When a new developer joins the team, the setup experience should be: clone the
 repo, run one command, and have a working development environment. Every
 additional manual step is a potential point of confusion and wasted time.
 
-For Flagline, the first-time flow is:
+For Crivline, the first-time flow is:
 
 1. **Clone the repo.** Standard Git.
 2. **Run the setup command.** A Makefile target or script that does everything:
@@ -485,7 +485,7 @@ For Flagline, the first-time flow is:
 
 ### Why Docker Compose for Infrastructure Only
 
-The Flagline development setup uses Docker Compose for Postgres and Redis, but
+The Crivline development setup uses Docker Compose for Postgres and Redis, but
 runs the Node.js applications directly on the developer's machine. This is a
 deliberate choice.
 
@@ -657,7 +657,7 @@ money on CI minutes.
 ### Separate Deployment Workflows
 
 The PR pipeline validates code quality. Deployment is a separate concern with
-separate triggers. Flagline has three deployment targets, and each has its own
+separate triggers. Crivline has three deployment targets, and each has its own
 workflow:
 
 **Dashboard deploys to Vercel** when changes to `apps/dashboard/`,
@@ -719,7 +719,7 @@ displaying data, not making irreversible changes.
 
 ### The Big Picture
 
-Flagline's production architecture has four main pieces: the dashboard, the
+Crivline's production architecture has four main pieces: the dashboard, the
 evaluation API, the database, and the cache. Each is deployed to a different
 platform, and understanding why helps you make the right trade-offs.
 
@@ -791,7 +791,7 @@ migrate to Fly.io later. If you know from the start that evaluation latency
 matters (because your customers' page loads depend on it), go with Fly.io and
 deploy to the regions where your customers are.
 
-For Flagline, the recommendation is Fly.io because the evaluation API's core
+For Crivline, the recommendation is Fly.io because the evaluation API's core
 value proposition is speed. A flag evaluation that takes 200ms because the
 API is in US East and the customer is in Singapore undermines the product.
 Multi-region deployment is not a premature optimization for a feature flag
@@ -815,7 +815,7 @@ built-in connection pooling and supports read replicas.
 
 **Supabase** is a broader platform that includes Postgres, authentication, file
 storage, real-time subscriptions, and edge functions. If you need those
-additional features, Supabase is compelling. For Flagline, which uses Auth.js
+additional features, Supabase is compelling. For Crivline, which uses Auth.js
 for authentication and has its own API, most of Supabase's extras are
 redundant. You would be using it as managed Postgres, which it does well, but
 you are paying (in complexity, if not money) for features you do not use.
@@ -825,7 +825,7 @@ read replicas, fewer features. But it is simple, and it lives on the same
 platform as your API if you choose Railway for that. One dashboard, one billing
 account.
 
-**The recommendation for Flagline is Neon.** Database branching for preview
+**The recommendation for Crivline is Neon.** Database branching for preview
 environments is a workflow improvement that compounds over time. Connection
 pooling and read replicas are important for the evaluation API's scaling story
 (discussed in Section 10). The serverless pricing model means you pay based on
@@ -849,7 +849,7 @@ direct one for Prisma migrations that need DDL access (`DIRECT_URL`).
 
 ### Redis: Upstash vs Self-Hosted
 
-Redis serves two purposes in Flagline: caching flag configurations for fast
+Redis serves two purposes in Crivline: caching flag configurations for fast
 evaluation, and pub/sub for real-time flag update notifications.
 
 **Upstash** is serverless Redis with an HTTP/REST API. This matters because
@@ -875,18 +875,18 @@ API, where microseconds matter, you use the TCP client.
 
 ### Domain Architecture
 
-Flagline uses separate subdomains for each service:
+Crivline uses separate subdomains for each service:
 
-- `flagline.dev` -- Marketing site (landing page, pricing, docs)
-- `app.flagline.dev` -- Dashboard (the SaaS product)
-- `api.flagline.dev` -- Evaluation API (what SDKs call)
-- `docs.flagline.dev` -- API documentation
+- `crivline.dev` -- Marketing site (landing page, pricing, docs)
+- `app.crivline.dev` -- Dashboard (the SaaS product)
+- `api.crivline.dev` -- Evaluation API (what SDKs call)
+- `docs.crivline.dev` -- API documentation
 
-Why separate subdomains instead of paths (`flagline.dev/app`,
-`flagline.dev/api`)? Three reasons:
+Why separate subdomains instead of paths (`crivline.dev/app`,
+`crivline.dev/api`)? Three reasons:
 
 1. **Independent deployment.** Each subdomain points to a different platform.
-   `app.flagline.dev` is a CNAME to Vercel. `api.flagline.dev` is a CNAME to
+   `app.crivline.dev` is a CNAME to Vercel. `api.crivline.dev` is a CNAME to
    Fly.io. Path-based routing would require a reverse proxy in front of
    everything, adding latency and a single point of failure.
 
@@ -894,8 +894,8 @@ Why separate subdomains instead of paths (`flagline.dev/app`,
    the dashboard gets 10. Separate subdomains mean separate infrastructure that
    scales independently.
 
-3. **Security isolation.** Cookies set on `app.flagline.dev` are not sent to
-   `api.flagline.dev`. This is browser security working in your favor --
+3. **Security isolation.** Cookies set on `app.crivline.dev` are not sent to
+   `api.crivline.dev`. This is browser security working in your favor --
    authentication cookies for the dashboard are not leaked to the evaluation
    API.
 
@@ -1071,8 +1071,8 @@ depend on semantic versioning being accurate. A breaking change published as a
 patch will break their applications. The Changesets workflow forces you to think
 about the version bump, not just the code change.
 
-The `"linked"` configuration in Changesets ensures `@flagline/js` and
-`@flagline/react` always have the same version number. If you bump one, you
+The `"linked"` configuration in Changesets ensures `@crivline/js` and
+`@crivline/react` always have the same version number. If you bump one, you
 bump both. This prevents confusion for customers who install both packages --
 they always see matching version numbers.
 
@@ -1195,7 +1195,7 @@ when it needs to warm the cache.
 
 ### When to Think About These Problems
 
-Not now. Flagline's first priority is building the product and getting
+Not now. Crivline's first priority is building the product and getting
 customers. The architecture described above (stateless API, Redis pub/sub,
 connection pooling) supports horizontal scaling without additional work. When
 you need to scale:
@@ -1250,16 +1250,16 @@ them through good engineering practices, not infrastructure.
 
 ---
 
-## Appendix: The Mental Model -- Laravel to Flagline
+## Appendix: The Mental Model -- Laravel to Crivline
 
 This table maps the major concepts for quick reference when you find yourself
-thinking "how would I do this in the Flagline world?"
+thinking "how would I do this in the Crivline world?"
 
-| Laravel Concept | Flagline Equivalent | Key Difference |
+| Laravel Concept | Crivline Equivalent | Key Difference |
 |---|---|---|
 | Single `composer.json` | Root `package.json` + `pnpm-workspace.yaml` | Workspace-aware; manages multiple projects |
 | `composer install` | `pnpm install` | Single lock file for the entire monorepo |
-| `composer require` | `pnpm add <pkg> --filter @flagline/api` | Target a specific package |
+| `composer require` | `pnpm add <pkg> --filter @crivline/api` | Target a specific package |
 | Packagist | npm registry | SDKs published here |
 | `php artisan` | `turbo run <task>` | Orchestrates tasks across packages |
 | `app/Models/` | `packages/db/prisma/schema.prisma` | Prisma schema defines all models |

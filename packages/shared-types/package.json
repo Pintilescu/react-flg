@@ -1,5 +1,5 @@
 {
-  "name": "@flagline/types",
+  "name": "@crivline/types",
   "private": true,
   "version": "0.0.0",
   "main": "./dist/index.js",
@@ -20,8 +20,8 @@
     "clean": "rm -rf dist .turbo"
   },
   "devDependencies": {
-    "@flagline/config-eslint": "workspace:*",
-    "@flagline/config-typescript": "workspace:*",
+    "@crivline/config-eslint": "workspace:*",
+    "@crivline/config-typescript": "workspace:*",
     "eslint": "^8.57.1",
     "tsup": "^8.3.5",
     "typescript": "^5.7.3"

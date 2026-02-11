@@ -6,6 +6,6 @@ export default defineConfig({
   dts: true,
   sourcemap: true,
   clean: true,
-  external: ['react', '@flagline/js'],
+  external: ['react', '@crivline/js'],
   banner: { js: '"use client";' },
 });

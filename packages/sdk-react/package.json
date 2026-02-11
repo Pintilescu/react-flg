@@ -1,7 +1,7 @@
 {
-  "name": "@flagline/react",
+  "name": "@crivline/react",
   "version": "0.0.1",
-  "description": "Flagline feature flag SDK for React",
+  "description": "Crivline feature flag SDK for React",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
@@ -24,14 +24,14 @@
     "clean": "rm -rf dist .turbo"
   },
   "dependencies": {
-    "@flagline/js": "workspace:*"
+    "@crivline/js": "workspace:*"
   },
   "peerDependencies": {
     "react": "^18.0.0 || ^19.0.0"
   },
   "devDependencies": {
-    "@flagline/config-eslint": "workspace:*",
-    "@flagline/config-typescript": "workspace:*",
+    "@crivline/config-eslint": "workspace:*",
+    "@crivline/config-typescript": "workspace:*",
     "@types/react": "^19.0.7",
     "eslint": "^8.57.1",
     "react": "^19.0.0",

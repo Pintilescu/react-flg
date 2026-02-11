@@ -1,5 +1,5 @@
 {
-  "extends": "@flagline/config-typescript/node.json",
+  "extends": "@crivline/config-typescript/node.json",
   "compilerOptions": {
     "rootDir": "./src",
     "outDir": "./dist"
