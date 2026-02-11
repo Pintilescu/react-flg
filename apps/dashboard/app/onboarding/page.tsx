@@ -1,6 +1,6 @@
 'use client';
-import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 
 type OnboardingData = {
   orgName: string;
@@ -103,7 +103,9 @@ export default function OnboardingPage() {
           {step === 2 && (
             <div>
               <h2 className="text-xl font-semibold text-gray-900">Invite your team</h2>
-              <p className="text-sm text-gray-500 mt-1">Comma-separated emails. You can skip this.</p>
+              <p className="text-sm text-gray-500 mt-1">
+                Comma-separated emails. You can skip this.
+              </p>
               <textarea
                 value={data.inviteEmails}
                 onChange={(e) => updateField('inviteEmails', e.target.value)}
@@ -129,7 +131,9 @@ export default function OnboardingPage() {
             {step < 2 ? (
               <button
                 onClick={() => setStep(step + 1)}
-                disabled={(step === 0 && !data.orgName.trim()) || (step === 1 && !data.projectName.trim())}
+                disabled={
+                  (step === 0 && !data.orgName.trim()) || (step === 1 && !data.projectName.trim())
+                }
                 className="bg-emerald-600 text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Continue

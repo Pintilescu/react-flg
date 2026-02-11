@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic';
 import { prisma } from '@crivline/db';
 import { Flag, ToggleRight, LayoutGrid, Search, Plus } from 'lucide-react';
 import Link from 'next/link';
+
 import { getCurrentUser } from '../../lib/auth';
 
 function timeAgo(date: Date): string {

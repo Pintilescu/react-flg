@@ -1,5 +1,6 @@
-import { auth0 } from './auth0';
 import { prisma } from '@crivline/db';
+
+import { auth0 } from './auth0';
 
 export async function getCurrentUser() {
   const session = await auth0.getSession();

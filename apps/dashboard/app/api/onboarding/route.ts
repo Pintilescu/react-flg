@@ -1,6 +1,7 @@
-import { auth0 } from '../../../lib/auth0';
 import { prisma } from '@crivline/db';
 import { NextResponse } from 'next/server';
+
+import { auth0 } from '../../../lib/auth0';
 
 function slugify(text: string) {
   return text
@@ -86,6 +87,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ succes: true });
   } catch (error) {
+    console.log(error);
     return NextResponse.json({ error: 'Onboarding failed' }, { status: 500 });
   }
 }
