@@ -1,6 +1,7 @@
 import { prisma } from '@crivline/db';
 import { NextResponse } from 'next/server';
 
+import { generateApiKeys } from '../../../lib/api-keys';
 import { auth0 } from '../../../lib/auth0';
 
 function slugify(text: string) {
@@ -82,10 +83,28 @@ export async function POST(request: Request) {
         ],
       });
 
+      const environments = await tx.environment.findMany({
+        where: { projectId: project.id },
+      });
+
+      const apiKeyData = environments.map((env) => {
+        const { keyHash, keyPrefix } = generateApiKeys(env.slug);
+        return {
+          name: `Default ${env.name} Key`,
+          keyHash,
+          keyPrefix,
+          projectId: project.id,
+          environmentId: env.id,
+          createdById: user.id,
+        };
+      });
+
+      await tx.apiKey.createMany({ data: apiKeyData });
+
       return { tenant, user, project };
     });
 
-    return NextResponse.json({ succes: true });
+    return NextResponse.json({ success: true });
   } catch (error) {
     console.log(error);
     return NextResponse.json({ error: 'Onboarding failed' }, { status: 500 });

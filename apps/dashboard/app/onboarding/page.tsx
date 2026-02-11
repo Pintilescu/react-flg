@@ -74,7 +74,7 @@ export default function OnboardingPage() {
                 value={data.orgName}
                 onChange={(e) => updateField('orgName', e.target.value)}
                 placeholder="Acme Inc."
-                className="mt-4 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                className="mt-4 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
               />
             </div>
           )}
@@ -88,14 +88,14 @@ export default function OnboardingPage() {
                 value={data.projectName}
                 onChange={(e) => updateField('projectName', e.target.value)}
                 placeholder="My App"
-                className="mt-4 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                className="mt-4 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
               />
               <textarea
                 value={data.projectDescription}
                 onChange={(e) => updateField('projectDescription', e.target.value)}
                 placeholder="Optional description..."
                 rows={3}
-                className="mt-3 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent resize-none"
+                className="mt-3 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent resize-none"
               />
             </div>
           )}
@@ -111,7 +111,7 @@ export default function OnboardingPage() {
                 onChange={(e) => updateField('inviteEmails', e.target.value)}
                 placeholder="alice@acme.com, bob@acme.com"
                 rows={3}
-                className="mt-4 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent resize-none"
+                className="mt-4 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent resize-none"
               />
             </div>
           )}
