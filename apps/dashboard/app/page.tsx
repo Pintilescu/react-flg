@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 
 import { auth0 } from '@/lib/auth0';
+
 import { getCurrentUser } from '../lib/auth';
 
 export default async function HomePage() {
