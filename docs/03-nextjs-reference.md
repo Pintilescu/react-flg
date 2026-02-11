@@ -1,4 +1,4 @@
-# 03 -- Next.js Thinking Guide for Flagline
+# 03 -- Next.js Thinking Guide for Crivline
 
 > **Audience:** Backend developer with 5+ years PHP/Laravel experience, transitioning to React / Next.js / TypeScript.
 > **Stack:** Next.js 14+ (App Router), React 19, TypeScript, Prisma (PostgreSQL), Redis, Vercel.
@@ -37,15 +37,15 @@ In Laravel, you define Blade layouts with `@extends('layouts.dashboard')` and in
 
 Next.js layouts work differently in a way that matters enormously for a dashboard application. A `layout.tsx` file wraps every page in its directory subtree, and critically, it persists across navigations within that subtree. When a user navigates from `/dashboard/my-app/production/flags` to `/dashboard/my-app/production/audit-log`, the dashboard shell (sidebar, top navigation, organization picker) does not unmount and remount. It stays alive. Only the content area re-renders.
 
-Think about why this matters for Flagline specifically. The dashboard has a sidebar with the organization picker, a list of projects, and navigation links. It has a top bar with the user menu. Below that, there are environment tabs. And then there is the actual page content. If each navigation destroyed and rebuilt the sidebar, you would lose scroll position, you would lose the open/closed state of dropdowns, and you would see a flash of loading state for UI that has not actually changed. Layout persistence eliminates all of that.
+Think about why this matters for Crivline specifically. The dashboard has a sidebar with the organization picker, a list of projects, and navigation links. It has a top bar with the user menu. Below that, there are environment tabs. And then there is the actual page content. If each navigation destroyed and rebuilt the sidebar, you would lose scroll position, you would lose the open/closed state of dropdowns, and you would see a flash of loading state for UI that has not actually changed. Layout persistence eliminates all of that.
 
-The nesting model compounds this benefit. Flagline has multiple layout levels: the root layout (HTML shell, providers), the dashboard layout (sidebar, top bar), the project layout (environment tabs, project context), and possibly a flags layout (for the split-panel view with parallel routes). Each layer persists independently. Navigate from one environment to another within the same project, and only the environment layout and below re-render. Navigate from one project to another, and only the project layout and below re-render. The dashboard shell stays stable throughout.
+The nesting model compounds this benefit. Crivline has multiple layout levels: the root layout (HTML shell, providers), the dashboard layout (sidebar, top bar), the project layout (environment tabs, project context), and possibly a flags layout (for the split-panel view with parallel routes). Each layer persists independently. Navigate from one environment to another within the same project, and only the environment layout and below re-render. Navigate from one project to another, and only the project layout and below re-render. The dashboard shell stays stable throughout.
 
 This is the single most important difference from Laravel's approach to layouts. In Laravel, layouts are templates. In Next.js, layouts are live, persistent components that maintain state across navigations.
 
 ### Route groups as organizational boundaries
 
-Here is where the thinking gets interesting. Flagline has three fundamentally different sections: marketing pages (landing, pricing, docs, blog), authentication pages (login, signup, forgot password), and the dashboard (everything behind auth). Each section needs a different visual shell. Marketing pages have a public navbar and footer. Auth pages have a centered card layout. The dashboard has the sidebar and top bar.
+Here is where the thinking gets interesting. Crivline has three fundamentally different sections: marketing pages (landing, pricing, docs, blog), authentication pages (login, signup, forgot password), and the dashboard (everything behind auth). Each section needs a different visual shell. Marketing pages have a public navbar and footer. Auth pages have a centered card layout. The dashboard has the sidebar and top bar.
 
 In Laravel, you would handle this with different Blade layouts and middleware groups. In Next.js, you use route groups -- directories wrapped in parentheses like `(marketing)`, `(auth)`, and `(dashboard)`. The key thing to understand is that parentheses mean "this directory affects layout nesting but does NOT appear in the URL." So `app/(marketing)/pricing/page.tsx` responds to `/pricing`, not `/marketing/pricing`. And `app/(auth)/login/page.tsx` responds to `/login`, not `/auth/login`.
 
@@ -53,9 +53,9 @@ Each route group can have its own `layout.tsx`. The marketing group gets the pub
 
 Think of route groups as organizational boundaries for your code that happen to also be layout boundaries. They answer the question: "Which pages share a common shell?" Group them together. The URL structure is independent from the layout structure, which is a flexibility that Laravel's approach does not offer -- in Laravel, if you want a different layout, you change the `@extends` call in the Blade template, but the code organization is separate from the routing.
 
-### How to think about the Flagline structure
+### How to think about the Crivline structure
 
-When designing the file tree for Flagline, the thinking process goes like this. Start with the user experience: what are the distinct "contexts" a user can be in?
+When designing the file tree for Crivline, the thinking process goes like this. Start with the user experience: what are the distinct "contexts" a user can be in?
 
 First, the public context. A visitor lands on the marketing site. They see a navbar with links to pricing, docs, and a login button. They see a footer. Every page in this context shares that shell. This becomes the `(marketing)` route group.
 
@@ -67,11 +67,11 @@ Within the dashboard, there is further nesting. A project has multiple environme
 
 The `[projectSlug]` and `[environment]` directories are dynamic segments -- the Next.js equivalent of Laravel's `{project}` route parameters. They work the same conceptually: the value from the URL is passed to the page component as a prop. But because the dynamic segment is also a directory, it can have its own layout, its own loading state, and its own error boundary. In Laravel, you would need to manually handle all of those concerns in the controller. Here, the framework handles them based on where you put files.
 
-There is also the catch-all route pattern: `[...slug]` captures all remaining URL segments as an array. This is useful for the docs section of Flagline, where `/docs/sdk/react/hooks` should resolve to a specific documentation page without you defining a route for every possible path. The `slug` parameter would be `["sdk", "react", "hooks"]`, and your page component joins them to look up the right content. This is like Laravel's `{path?}` wildcard route parameter but more flexible because it captures the segments as an array rather than a single string.
+There is also the catch-all route pattern: `[...slug]` captures all remaining URL segments as an array. This is useful for the docs section of Crivline, where `/docs/sdk/react/hooks` should resolve to a specific documentation page without you defining a route for every possible path. The `slug` parameter would be `["sdk", "react", "hooks"]`, and your page component joins them to look up the right content. This is like Laravel's `{path?}` wildcard route parameter but more flexible because it captures the segments as an array rather than a single string.
 
 ### The nested layout model and why it matters for a dashboard
 
-Let me trace through what happens when a Flagline user navigates to `/dashboard/my-app/production/flags`. The framework assembles the response by nesting layouts:
+Let me trace through what happens when a Crivline user navigates to `/dashboard/my-app/production/flags`. The framework assembles the response by nesting layouts:
 
 The root layout renders the HTML element, the body, and wraps everything in providers (session, theme, etc.). Inside that, the dashboard layout checks authentication and renders the sidebar and top bar. Inside that, the project layout fetches the project by slug, verifies access, and renders the environment tabs. Inside that, the environment layout might set some context. And finally, the flags page renders the actual flag list.
 
@@ -91,7 +91,7 @@ A `loading.tsx` file provides a streaming fallback. When the page component is d
 
 An `error.tsx` file catches errors in its subtree. If the flags page throws an exception (database timeout, unexpected null), the error boundary renders instead of crashing the entire page. The dashboard layout, sidebar, and navigation all remain functional. The user sees an error message with a retry button in the content area only. In Laravel, an exception would typically result in a full-page error view, losing all layout context. Here, errors are contained to the segment that threw them.
 
-The thinking process for where to place loading and error files is: what is the smallest unit that should show a loading state independently? For Flagline, the flags list should have its own loading skeleton, but the dashboard shell should not show a loader when only the flags list is loading. So `loading.tsx` goes in the flags directory, not in the dashboard layout directory. Similarly, if the flags query fails, only the flags content area should show an error, not the entire dashboard. So `error.tsx` also goes at the flags directory level.
+The thinking process for where to place loading and error files is: what is the smallest unit that should show a loading state independently? For Crivline, the flags list should have its own loading skeleton, but the dashboard shell should not show a loader when only the flags list is loading. So `loading.tsx` goes in the flags directory, not in the dashboard layout directory. Similarly, if the flags query fails, only the flags content area should show an error, not the entire dashboard. So `error.tsx` also goes at the flags directory level.
 
 This per-segment granularity is one of the most powerful architectural tools in the App Router. It lets you design resilient UIs where failures in one section do not cascade to unrelated sections.
 
@@ -121,7 +121,7 @@ If you have used Livewire, the analogy is even closer. A Livewire component is l
 
 This is the most important architectural principle for building a Next.js dashboard. When you find yourself needing interactivity, do not make the entire page a client component. Instead, push the `"use client"` boundary as far down the component tree as possible.
 
-Consider the Flagline flags page. It shows a toolbar with search and filters, a table of flags, and each flag row has a toggle switch and a context menu. The instinct from a Laravel background might be: "This page has interactive elements, so I need to make it a client page." Resist that instinct.
+Consider the Crivline flags page. It shows a toolbar with search and filters, a table of flags, and each flag row has a toggle switch and a context menu. The instinct from a Laravel background might be: "This page has interactive elements, so I need to make it a client page." Resist that instinct.
 
 Instead, think about it layer by layer. The page itself fetches the flag data from Prisma -- that is a server concern. The table that renders the list of flags is just mapping data to rows -- that is a server concern. The toolbar with the search input needs to handle user input -- that is a client concern. The toggle switch on each flag row needs to respond to clicks and call a server action -- that is a client concern. The context menu on each row needs to track open/closed state -- that is a client concern.
 
@@ -129,9 +129,9 @@ So the page is a server component. The table can be a server component. But the 
 
 Why does this matter? Three reasons. First, every line of code in a client component gets shipped to the browser as JavaScript. A server component that fetches 50 flags from Prisma and renders them in a table sends only the HTML -- zero JavaScript for that rendering logic. If you made the whole page a client component, all of that rendering code would be in the browser bundle, plus you would need to fetch the data via an API call instead of directly querying Prisma. Second, server components can be async -- they can `await` database queries directly in the render function. Client components cannot do this. Third, server components have access to secrets, environment variables, and the filesystem. Client components run in the browser and have access to none of those things.
 
-### Walking through Flagline's dashboard, page by page
+### Walking through Crivline's dashboard, page by page
 
-Let me walk through the reasoning for each major piece of the Flagline dashboard.
+Let me walk through the reasoning for each major piece of the Crivline dashboard.
 
 **The flags list page.** The page component itself is a server component. It receives route parameters (`projectSlug`, `environment`), queries Prisma for the flags, and renders the result. It does not need `useState` or `useEffect`. It does not respond to clicks. It just fetches and renders. The flag toolbar (search input, filter dropdown, "Create Flag" button) is a client component because it needs to track input state and potentially update URL search params on user interaction. Each flag row's toggle switch is a client component because it needs an `onChange` handler. The rest of the row (the flag name, key, description, last-modified date) is display-only and can be rendered by the server.
 
@@ -207,7 +207,7 @@ One nuance: server actions support progressive enhancement. If JavaScript fails 
 
 ### When server actions make sense vs API endpoints
 
-This is a decision that comes up repeatedly in a SaaS like Flagline. The general framework is:
+This is a decision that comes up repeatedly in a SaaS like Crivline. The general framework is:
 
 Use a server action when the mutation is initiated by a user interacting with your Next.js UI. Creating a flag, toggling a flag, inviting a team member, updating project settings -- all of these are actions triggered by a human clicking something in the dashboard. Server actions are perfect here because they give you a direct function call from the UI to the server, with automatic type safety, no manual API endpoint management, and built-in integration with React's form handling and optimistic updates.
 
@@ -229,7 +229,7 @@ When you create a flag, the flag list page is stale. You call `revalidatePath('/
 
 The thinking process is: first, what data did I change? Second, what pages display that data? Third, should I invalidate by path (specific pages) or by tag (everything that uses this data)?
 
-Path-based revalidation is simpler to reason about but less precise. Tag-based revalidation is more granular but requires you to set up a consistent tagging scheme. For Flagline, a reasonable approach is to use tags scoped to the entity: `project:{id}:flags`, `project:{id}:members`, `env:{id}:audit-log`. When a flag changes, invalidate the flags tag. When a member is invited, invalidate the members tag. This way, the audit log page is not unnecessarily revalidated when someone toggles a flag.
+Path-based revalidation is simpler to reason about but less precise. Tag-based revalidation is more granular but requires you to set up a consistent tagging scheme. For Crivline, a reasonable approach is to use tags scoped to the entity: `project:{id}:flags`, `project:{id}:members`, `env:{id}:audit-log`. When a flag changes, invalidate the flags tag. When a member is invited, invalidate the members tag. This way, the audit log page is not unnecessarily revalidated when someone toggles a flag.
 
 One subtlety: revalidation is asynchronous and happens on the next request. If you toggle a flag and expect the UI to update immediately, you need to pair revalidation with either optimistic updates (using React's `useOptimistic` hook) or a `router.refresh()` call from the client component. The revalidation tells the server-side cache to regenerate; the optimistic update makes the UI feel instant to the user.
 
@@ -251,13 +251,13 @@ Think of it as a bouncer at the door of a club. The bouncer can check your ID (p
 
 ### What to do in middleware
 
-Given the edge constraints, middleware in Flagline should handle exactly three categories of concerns.
+Given the edge constraints, middleware in Crivline should handle exactly three categories of concerns.
 
 **Authentication redirects.** Check if a request to `/dashboard/*` has a valid session cookie. If not, redirect to `/login`. Check if a request to `/login` already has a valid session. If so, redirect to `/dashboard`. This does not require a database lookup -- you are parsing a JWT from a cookie, which is a lightweight cryptographic operation that the edge runtime can handle.
 
 **Security headers.** Set `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`, and other security headers on every response. This is a one-liner per header and makes sense to do at the edge so every response gets them, including cached static pages.
 
-**Tenant resolution for custom domains.** If Flagline supports custom domains for customer-facing flag endpoints, middleware can read the `Host` header, determine which tenant the request belongs to, and set a header (`x-flagline-tenant-id`) that downstream server components or route handlers can read. The middleware itself does not look up the tenant in the database -- it either uses a lightweight lookup (like Upstash Redis via HTTP) or passes the raw domain through and lets the server component resolve it.
+**Tenant resolution for custom domains.** If Crivline supports custom domains for customer-facing flag endpoints, middleware can read the `Host` header, determine which tenant the request belongs to, and set a header (`x-crivline-tenant-id`) that downstream server components or route handlers can read. The middleware itself does not look up the tenant in the database -- it either uses a lightweight lookup (like Upstash Redis via HTTP) or passes the raw domain through and lets the server component resolve it.
 
 ### What NOT to do in middleware
 
@@ -297,11 +297,11 @@ The middleware function should be short. If it grows beyond 50-60 lines, you are
 
 ### The key architectural decision
 
-Flagline serves two fundamentally different kinds of HTTP traffic, and recognizing this distinction early is one of the most important architectural decisions in the project.
+Crivline serves two fundamentally different kinds of HTTP traffic, and recognizing this distinction early is one of the most important architectural decisions in the project.
 
-The first kind is dashboard traffic. Humans using the Flagline web app to create flags, edit targeting rules, manage team members, and view audit logs. This traffic is characterized by low volume (tens of requests per second at most), complex rendering (full HTML pages with nested layouts), and a need for the richest possible developer experience (server components, server actions, streaming, Suspense).
+The first kind is dashboard traffic. Humans using the Crivline web app to create flags, edit targeting rules, manage team members, and view audit logs. This traffic is characterized by low volume (tens of requests per second at most), complex rendering (full HTML pages with nested layouts), and a need for the richest possible developer experience (server components, server actions, streaming, Suspense).
 
-The second kind is evaluation traffic. Customer applications calling the Flagline API millions of times per day to check whether a flag is enabled for a given user. This traffic is characterized by extremely high volume, a need for sub-10ms response times, simple JSON payloads, and long-lived connections (Server-Sent Events for real-time flag updates).
+The second kind is evaluation traffic. Customer applications calling the Crivline API millions of times per day to check whether a flag is enabled for a given user. This traffic is characterized by extremely high volume, a need for sub-10ms response times, simple JSON payloads, and long-lived connections (Server-Sent Events for real-time flag updates).
 
 Trying to serve both through Next.js would be a mistake, and understanding why is critical to the architecture.
 
@@ -319,9 +319,9 @@ The evaluation API runs on a persistent server (Fly.io, Railway, or a VPS). It b
 
 When designing a feature, ask: "Where does this request come from and where should it go?"
 
-If the request comes from a human using the Flagline web app, it goes through Next.js. The user clicks something, which either navigates to a new page (server component rendering) or calls a server action (mutation). All dashboard-related data fetching and mutation happens within the Next.js application.
+If the request comes from a human using the Crivline web app, it goes through Next.js. The user clicks something, which either navigates to a new page (server component rendering) or calls a server action (mutation). All dashboard-related data fetching and mutation happens within the Next.js application.
 
-If the request comes from a customer's SDK (the `@flagline/js` or `@flagline/react` package), it goes to the Fastify evaluation API. The SDK calls `GET /v1/flags` to fetch all flag configurations, `POST /v1/evaluate` to evaluate a specific flag for a user context, or connects to `GET /v1/flags/stream` for real-time updates via SSE.
+If the request comes from a customer's SDK (the `@crivline/js` or `@crivline/react` package), it goes to the Fastify evaluation API. The SDK calls `GET /v1/flags` to fetch all flag configurations, `POST /v1/evaluate` to evaluate a specific flag for a user context, or connects to `GET /v1/flags/stream` for real-time updates via SSE.
 
 If the request comes from an external service like Stripe, it goes to a Next.js route handler at `/api/webhooks/stripe`. Webhooks are infrequent and dashboard-related (they update billing state), so they belong in the Next.js application.
 
@@ -337,7 +337,7 @@ Both services use Redis pub/sub as a communication channel. When the dashboard u
 
 ### The data flow for a flag toggle
 
-To make this concrete, trace the full data flow when a Flagline user toggles a flag from disabled to enabled in the dashboard:
+To make this concrete, trace the full data flow when a Crivline user toggles a flag from disabled to enabled in the dashboard:
 
 1. The user clicks the toggle in the dashboard UI (client component). The client component calls the `toggleFlag` server action.
 2. The server action (running in a Vercel serverless function) verifies the session, checks authorization, and updates the flag in PostgreSQL via Prisma.
@@ -359,7 +359,7 @@ Notice that the Next.js application and the evaluation API never talk to each ot
 
 In Laravel, sessions typically live in the database (or Redis, or files) on the server side. The browser gets a session cookie with an opaque ID. On each request, the framework looks up the session by that ID. This means every request that needs auth requires a database or Redis lookup.
 
-In Next.js with Auth.js (NextAuth.js v5), you have a choice: database sessions or JWT sessions. For Flagline, JWT sessions are the right choice, and here is the reasoning.
+In Next.js with Auth.js (NextAuth.js v5), you have a choice: database sessions or JWT sessions. For Crivline, JWT sessions are the right choice, and here is the reasoning.
 
 A JWT session stores the session data (user ID, email, organization memberships) directly in an encrypted cookie. No database lookup needed to verify authentication. The cookie is signed and encrypted, so it cannot be tampered with. This matters because of how many places in a Next.js application need to check the session:
 
@@ -371,7 +371,7 @@ Server actions check the session on every mutation. If every toggle-flag call re
 
 With JWTs, all of these checks are just "decrypt the cookie and read the data." Fast, no I/O required.
 
-The tradeoff is that JWT data can become stale. If a user changes their name or gets removed from an organization, the JWT still contains the old data until it expires or is refreshed. For Flagline, this is acceptable because organization membership changes are infrequent, and the JWT is refreshed on every page load via the Auth.js session callback.
+The tradeoff is that JWT data can become stale. If a user changes their name or gets removed from an organization, the JWT still contains the old data until it expires or is refreshed. For Crivline, this is acceptable because organization membership changes are infrequent, and the JWT is refreshed on every page load via the Auth.js session callback.
 
 ### Session vs JWT: when to pick which
 
@@ -381,7 +381,7 @@ Database sessions store session data server-side and give the browser an opaque 
 
 JWT sessions store session data in an encrypted cookie on the client. Every time you need session data, you decrypt the cookie. The advantage is zero I/O -- no database call needed. The disadvantage is that JWTs cannot be instantly invalidated. If you want to revoke a session (user was compromised, employee was terminated), you cannot delete the JWT from the user's browser. You have to wait for it to expire, or maintain a revocation list that you check on each request (which brings back the database lookup).
 
-For Flagline, JWT sessions are the right default because the edge middleware needs to check auth, and the edge runtime cannot easily make database calls. If you need instant session revocation (a feature you might add later for enterprise customers), you can add a lightweight revocation check in server components without abandoning JWTs -- check the JWT first (fast, no I/O), and then if the request reaches a server component, verify the user has not been revoked (one fast database query).
+For Crivline, JWT sessions are the right default because the edge middleware needs to check auth, and the edge runtime cannot easily make database calls. If you need instant session revocation (a feature you might add later for enterprise customers), you can add a lightweight revocation check in server components without abandoning JWTs -- check the JWT first (fast, no I/O), and then if the request reaches a server component, verify the user has not been revoked (one fast database query).
 
 ### How auth is checked at different layers
 
@@ -399,7 +399,7 @@ This layered approach means that most unauthorized requests are caught early (at
 
 ### The multi-tenancy model
 
-Flagline's authorization model is hierarchical: a user belongs to one or more organizations, each organization has one or more projects, and each project has multiple environments. A user's role is scoped to the organization level: OWNER, ADMIN, or MEMBER.
+Crivline's authorization model is hierarchical: a user belongs to one or more organizations, each organization has one or more projects, and each project has multiple environments. A user's role is scoped to the organization level: OWNER, ADMIN, or MEMBER.
 
 The thinking process for protecting a resource is to trace the ownership chain. A flag belongs to an environment, which belongs to a project, which belongs to an organization. To check if a user can toggle a flag, you verify that the user is a member of the organization that owns the project that contains the environment that contains the flag, and that their role is sufficient for the operation (toggling requires ADMIN or OWNER).
 
@@ -437,7 +437,7 @@ Before reaching for any caching mechanism, ask this question about each piece of
 
 **"It can be hours or days stale."** This is your marketing site. The landing page, pricing page, blog posts, documentation. This content changes rarely. Use static generation with periodic revalidation. Set `export const revalidate = 3600` (one hour) on the page, and Next.js will serve a pre-built HTML page from the CDN. Every hour, the next request triggers a background rebuild. Users always get a fast response because they are hitting the CDN, and the content is at most one revalidation period stale.
 
-**"It should be fresh, but a few seconds of staleness is acceptable."** This is the Flagline dashboard's flag list, project settings, member list. The data changes when a user performs an action, and after that action, it should update. Use server components with `noStore()` to skip the server-side cache and always query the database directly. Alternatively, use `unstable_cache` with cache tags and invalidate the tags when a mutation happens. The flags list shows fresh data because the server action that toggles a flag calls `revalidateTag('project:abc:flags')` after the mutation.
+**"It should be fresh, but a few seconds of staleness is acceptable."** This is the Crivline dashboard's flag list, project settings, member list. The data changes when a user performs an action, and after that action, it should update. Use server components with `noStore()` to skip the server-side cache and always query the database directly. Alternatively, use `unstable_cache` with cache tags and invalidate the tags when a mutation happens. The flags list shows fresh data because the server action that toggles a flag calls `revalidateTag('project:abc:flags')` after the mutation.
 
 **"It must be real-time."** This is flag evaluation for customer SDKs. A developer toggles a flag in the dashboard, and within seconds, the change should be reflected in their application. This is not a Next.js caching concern at all -- it is handled by the evaluation API's Redis cache and the pub/sub invalidation channel. Next.js is not in this path.
 
@@ -457,9 +457,9 @@ If a page uses `export const revalidate = 3600`, it gets ISR (Incremental Static
 
 You generally do not need to think about this cache unless a user performs a mutation and the UI does not update. In that case, `router.refresh()` forces the client to re-fetch the current page's server component data.
 
-### The Flagline caching strategy
+### The Crivline caching strategy
 
-For Flagline specifically, the approach is:
+For Crivline specifically, the approach is:
 
 Marketing pages use ISR. Set a revalidation interval and forget about them. If you update pricing, call `revalidateTag('pricing')` from the admin action. The next visitor sees the updated page.
 
@@ -475,7 +475,7 @@ Path-based revalidation (`revalidatePath('/dashboard/my-app/production/flags')`)
 
 Tag-based revalidation (`revalidateTag('project:abc:flags')`) says: "Every piece of cached data tagged with this label is stale." This is more surgical and more powerful. If multiple pages display data tagged with `project:abc:flags` -- the flags list page, the project overview page, a summary widget in the dashboard -- all of them are invalidated with a single call. The downside is that you must set up the tagging scheme consistently. Every `unstable_cache` call and every `fetch` call that should be tag-invalidatable needs the `tags` option.
 
-For Flagline, a good mental framework is: use path revalidation when you know exactly which page was affected, and use tag revalidation when the change could affect multiple views. Creating a flag affects the flags list page (path revalidation works) but also any summary counts or overview widgets (tag revalidation is better). Toggling a flag's enabled state might affect the flags list page and the flag detail panel (tag revalidation handles both).
+For Crivline, a good mental framework is: use path revalidation when you know exactly which page was affected, and use tag revalidation when the change could affect multiple views. Creating a flag affects the flags list page (path revalidation works) but also any summary counts or overview widgets (tag revalidation is better). Toggling a flag's enabled state might affect the flags list page and the flag detail panel (tag revalidation handles both).
 
 A practical tagging convention is to namespace tags by entity and scope: `project:{id}:flags`, `project:{id}:members`, `env:{id}:audit-log`, `flag:{id}:detail`. When you mutate a flag, invalidate `project:{projectId}:flags` and `flag:{flagId}:detail`. This is analogous to Laravel's cache tags but applied to rendered pages and data fetches rather than arbitrary cache entries.
 
@@ -487,7 +487,7 @@ Cache aggressively for public-facing pages where every millisecond of response t
 
 The most common caching mistake in a Next.js application is not over-caching or under-caching -- it is inconsistent caching. If some dashboard pages are cached and others are not, and your invalidation logic covers some mutations but not others, you get a dashboard where some pages show stale data unpredictably. It is better to either commit to a full caching strategy with disciplined invalidation, or to opt out entirely for all dashboard pages and only cache the public-facing content.
 
-For Flagline, the recommendation is to start with no caching for the dashboard (`dynamic = 'force-dynamic'` in the dashboard layout), cache marketing pages with ISR, and add dashboard caching later only if you have a measured performance problem. Premature caching optimization is a worse trap in Next.js than in most frameworks because the invalidation surface area is larger.
+For Crivline, the recommendation is to start with no caching for the dashboard (`dynamic = 'force-dynamic'` in the dashboard layout), cache marketing pages with ISR, and add dashboard caching later only if you have a measured performance problem. Premature caching optimization is a worse trap in Next.js than in most frameworks because the invalidation surface area is larger.
 
 > **Coming from Laravel:** In Laravel, caching is opt-in and explicit. In Next.js, some caching happens by default (route cache for static pages, fetch cache). The most important thing to learn is how to opt OUT of caching for dynamic pages. `noStore()` and `dynamic = 'force-dynamic'` are your tools for this. Think of them as the equivalent of never calling `Cache::remember()` in your Laravel controllers -- just querying the database directly every time. For a dashboard, that is the right default.
 
@@ -519,7 +519,7 @@ Vercel allows you to set different values for each environment: Production, Prev
 
 Production environment variables point to your production database, production Stripe keys, and production third-party services. Preview environment variables point to a staging database, test Stripe keys, and sandbox services.
 
-This means every pull request gets a preview deployment with its own URL (`flagline-git-feature-xyz.vercel.app`) that connects to the staging database and uses test Stripe keys. A reviewer can click the preview link, test the feature, and see it working with real (but non-production) data. This is like having Forge create a new server with a staging database for every PR -- except it is automatic and costs nothing extra.
+This means every pull request gets a preview deployment with its own URL (`crivline-git-feature-xyz.vercel.app`) that connects to the staging database and uses test Stripe keys. A reviewer can click the preview link, test the feature, and see it working with real (but non-production) data. This is like having Forge create a new server with a staging database for every PR -- except it is automatic and costs nothing extra.
 
 The mental model for environment variables in Next.js has one critical rule: any variable that needs to be accessible in client-side JavaScript must be prefixed with `NEXT_PUBLIC_`. Variables without this prefix are only available in server-side code (server components, server actions, route handlers, middleware). This is a security feature enforced at the build level. In Laravel, you access all environment variables everywhere via `env()`. In Next.js, the build system literally does not include non-prefixed variables in the client bundle. If you forget the prefix, the variable is `undefined` in the browser. If you add the prefix to a secret, it is exposed to the browser.
 
@@ -533,9 +533,9 @@ Your demo process changes. Need to show a stakeholder a feature in progress? Sha
 
 Your rollback process changes. If a production deployment causes issues, you redeploy the previous commit. Vercel keeps the build artifacts for recent deployments, so rollbacks are near-instant.
 
-### How this compares to deploying the full Flagline stack
+### How this compares to deploying the full Crivline stack
 
-Vercel handles the Next.js dashboard application. But Flagline has other components that Vercel does not manage: the Fastify evaluation API, the PostgreSQL database, and Redis.
+Vercel handles the Next.js dashboard application. But Crivline has other components that Vercel does not manage: the Fastify evaluation API, the PostgreSQL database, and Redis.
 
 The evaluation API deploys to a platform like Fly.io or Railway, which provide persistent servers (not serverless) with global distribution. The deployment is more traditional: push to a branch, CI builds a Docker image, the image is deployed to the server, health checks pass, traffic is routed to the new instance.
 
@@ -543,7 +543,7 @@ PostgreSQL runs on a managed service like Neon (which has a serverless/branching
 
 Redis runs on Upstash (for edge compatibility in middleware) or a managed Redis service like Redis Cloud.
 
-The full deployment picture for a Flagline release is: push to `main`, Vercel builds and deploys the dashboard, CI builds and deploys the evaluation API to Fly.io, and if there are database migrations, they run as a CI step before the application deployments. This is more complex than a single `forge deploy` command, but each piece scales independently and fails independently.
+The full deployment picture for a Crivline release is: push to `main`, Vercel builds and deploys the dashboard, CI builds and deploys the evaluation API to Fly.io, and if there are database migrations, they run as a CI step before the application deployments. This is more complex than a single `forge deploy` command, but each piece scales independently and fails independently.
 
 ### The build step: what happens and why it matters
 
@@ -565,7 +565,7 @@ With Vercel, there is no server to SSH into and run migrations on. Database migr
 
 This ordering matters. If you deploy application code that references a new database column before the migration runs, you get runtime errors. In Laravel on Forge, the deploy script runs sequentially, so you naturally get the right order. With Vercel, you need to make this ordering explicit in your CI/CD pipeline.
 
-For Flagline, the pattern is: GitHub Actions runs `prisma migrate deploy` against the production database, waits for success, and then either Vercel picks up the deployment automatically (if triggered by the same push) or the CI pipeline triggers it. For preview deployments, you either run migrations against a staging database or use Neon's database branching feature, which creates an isolated database branch for each PR.
+For Crivline, the pattern is: GitHub Actions runs `prisma migrate deploy` against the production database, waits for success, and then either Vercel picks up the deployment automatically (if triggered by the same push) or the CI pipeline triggers it. For preview deployments, you either run migrations against a staging database or use Neon's database branching feature, which creates an isolated database branch for each PR.
 
 > **Coming from Laravel:** Vercel is to Next.js what Vapor is to Laravel -- a serverless deployment platform that abstracts away servers. The key difference is that Vercel is the default, expected deployment target for Next.js, whereas Vapor is an alternative to Forge. Vercel's integration with GitHub (automatic preview deployments, environment variable scoping) makes the developer experience smoother than anything in the Laravel ecosystem, at the cost of being locked into their platform for the serverless deployment model. The migration story is the one area where the Laravel/Forge experience is simpler -- having migrations as a built-in deploy step rather than a separate CI concern is a genuine convenience that you give up in the serverless world.
 
@@ -573,7 +573,7 @@ For Flagline, the pattern is: GitHub Actions runs `prisma migrate deploy` agains
 
 ## Bringing It All Together
 
-The overarching mental model for building Flagline with Next.js is this: the framework does more for you than Laravel does, but in exchange, it requires you to think differently about where code runs.
+The overarching mental model for building Crivline with Next.js is this: the framework does more for you than Laravel does, but in exchange, it requires you to think differently about where code runs.
 
 In Laravel, all your PHP code runs in one place: the server. The question "where does this code execute?" never arises. In Next.js, code can run in four different environments: the build process (static generation), the edge runtime (middleware, edge functions), the Node.js server runtime (server components, server actions, route handlers), and the browser (client components). Every file you write, every function you define, runs in one of these environments, and the capabilities available in each differ.
 
@@ -593,10 +593,10 @@ The good news is that once you internalize these mental models, building with Ne
 
 If you have been writing Laravel for five or more years, expect an adjustment period of two to four weeks before the Next.js way of thinking feels natural. The concepts that will click first are routing (file-based is intuitive once you see it) and server actions (they map cleanly to the controller pattern). The concepts that take longer are the server/client component boundary (it requires rethinking how you compose UI) and the caching model (it requires understanding layers that Laravel does not have).
 
-The single best way to accelerate the transition is to build something. Not to read more documentation, not to watch more tutorials, but to sit down with the Flagline codebase and build a feature from scratch: add a new page, fetch data, handle a form submission, protect a route, deal with caching. The mental models described in this guide will crystallize through application, not through memorization.
+The single best way to accelerate the transition is to build something. Not to read more documentation, not to watch more tutorials, but to sit down with the Crivline codebase and build a feature from scratch: add a new page, fetch data, handle a form submission, protect a route, deal with caching. The mental models described in this guide will crystallize through application, not through memorization.
 
 When you get stuck -- and you will get stuck, particularly on caching behavior and the serialization boundary -- come back to the core questions. "Where does this code run?" "Does this component need interactivity?" "How fresh does this data need to be?" "Where should this request go?" These questions, applied consistently, will guide you to the right architectural decision in almost every case.
 
 ---
 
-*This document is part of the Flagline engineering reference. See also: `05-database-prisma-reference.md`, `07-stripe-billing-reference.md`, `08-architecture-monorepo-reference.md`.*
+*This document is part of the Crivline engineering reference. See also: `05-database-prisma-reference.md`, `07-stripe-billing-reference.md`, `08-architecture-monorepo-reference.md`.*

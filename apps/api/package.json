@@ -1,5 +1,5 @@
 {
-  "name": "@flagline/api",
+  "name": "@crivline/api",
   "private": true,
   "version": "0.0.0",
   "scripts": {
@@ -13,14 +13,14 @@
     "clean": "rm -rf dist .turbo"
   },
   "dependencies": {
-    "@flagline/db": "workspace:*",
-    "@flagline/types": "workspace:*",
+    "@crivline/db": "workspace:*",
+    "@crivline/types": "workspace:*",
     "fastify": "^5.2.1",
     "ioredis": "^5.4.2"
   },
   "devDependencies": {
-    "@flagline/config-eslint": "workspace:*",
-    "@flagline/config-typescript": "workspace:*",
+    "@crivline/config-eslint": "workspace:*",
+    "@crivline/config-typescript": "workspace:*",
     "@types/node": "^22.10.7",
     "eslint": "^8.57.1",
     "tsup": "^8.3.5",

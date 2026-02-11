@@ -5,8 +5,8 @@ import './globals.css';
 
 export const metadata: Metadata = {
   title: {
-    default: 'Flagline',
-    template: '%s | Flagline',
+    default: 'Crivline',
+    template: '%s | Crivline',
   },
   description: 'Feature flags for small teams and indie hackers',
 };

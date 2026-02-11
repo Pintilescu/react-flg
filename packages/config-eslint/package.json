@@ -1,5 +1,5 @@
 {
-  "name": "@flagline/config-eslint",
+  "name": "@crivline/config-eslint",
   "private": true,
   "version": "0.0.0",
   "main": "index.js",

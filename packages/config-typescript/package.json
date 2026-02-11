@@ -1,5 +1,5 @@
 {
-  "name": "@flagline/config-typescript",
+  "name": "@crivline/config-typescript",
   "private": true,
   "version": "0.0.0",
   "files": ["base.json", "nextjs.json", "node.json", "react-library.json"]

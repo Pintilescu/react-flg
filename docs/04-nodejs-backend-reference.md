@@ -1,10 +1,10 @@
 # 04 — Node.js / Backend API Reference
 
-> **Flagline** — Feature Flag SaaS
+> **Crivline** — Feature Flag SaaS
 > Stack: React, Next.js 14+ (App Router), Node.js, TypeScript, PostgreSQL (Prisma), Redis
 > Audience: Backend developer with 5+ years PHP/Laravel experience transitioning to this stack
 
-This document is a **code-forward API reference** for the Flagline evaluation API service. It covers architecture, endpoint design, authentication, the flag evaluation engine, Redis integration, SSE streaming, rate limiting, error handling, database access, and testing — with production-grade TypeScript implementations throughout.
+This document is a **code-forward API reference** for the Crivline evaluation API service. It covers architecture, endpoint design, authentication, the flag evaluation engine, Redis integration, SSE streaming, rate limiting, error handling, database access, and testing — with production-grade TypeScript implementations throughout.
 
 ---
 
@@ -27,7 +27,7 @@ This document is a **code-forward API reference** for the Flagline evaluation AP
 
 ### Why a Separate Service
 
-Flagline has two backend surfaces:
+Crivline has two backend surfaces:
 
 | Concern | Dashboard API | Evaluation API |
 |---|---|---|
@@ -43,7 +43,7 @@ The evaluation API is the hot path. Every page load in a customer's app calls `P
 
 ### Express vs Fastify
 
-Both work. We recommend **Fastify** for Flagline because:
+Both work. We recommend **Fastify** for Crivline because:
 
 - **Performance.** Fastify's radix-tree router and schema-based serialization make it roughly 2x faster than Express for JSON responses. For an evaluation API that returns small JSON payloads at high volume, this matters.
 - **Schema validation built-in.** Fastify uses JSON Schema to validate request/response shapes and to compile serializers. Faster than adding `express-validator` or `zod` as middleware.
@@ -156,9 +156,9 @@ async function main() {
   console.log("[startup] Redis connected");
 
   // 3. Subscribe to flag-change channel for real-time updates
-  await redisSub.subscribe("flagline:flag-updates");
+  await redisSub.subscribe("crivline:flag-updates");
   redisSub.on("message", (channel, message) => {
-    if (channel === "flagline:flag-updates") {
+    if (channel === "crivline:flag-updates") {
       sseManager.broadcast(JSON.parse(message));
     }
   });
@@ -480,7 +480,7 @@ fl_test_a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6
 ^^  ^^^^  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 |   |     32-character random hex
 |   Environment indicator: "live" or "test"
-Prefix: "fl" (Flagline)
+Prefix: "fl" (Crivline)
 ```
 
 ### API Key Generation (Dashboard Side)
@@ -537,7 +537,7 @@ interface CachedKeyData {
 }
 
 const CACHE_TTL_SECONDS = 300;
-const CACHE_PREFIX = "flagline:apikey:";
+const CACHE_PREFIX = "crivline:apikey:";
 
 function extractApiKey(request: FastifyRequest): string | null {
   const authHeader = request.headers.authorization;
@@ -651,7 +651,7 @@ export async function invalidateApiKeyCache(keyHash: string): Promise<void> {
 
 ## 4. Flag Evaluation Engine
 
-This is the heart of Flagline. The evaluation engine is a **pure function** -- no side effects, no database calls, no Redis. It takes a flag configuration and an evaluation context, and returns a result. Trivially testable.
+This is the heart of Crivline. The evaluation engine is a **pure function** -- no side effects, no database calls, no Redis. It takes a flag configuration and an evaluation context, and returns a result. Trivially testable.
 
 ### The Core Algorithm
 
@@ -1028,7 +1028,7 @@ import { FlagConfig } from "../types/flag";
 import { logger } from "../utils/logger";
 import { LRUCache } from "lru-cache";
 
-const FLAG_CACHE_PREFIX = "flagline:flags:";
+const FLAG_CACHE_PREFIX = "crivline:flags:";
 const FLAG_CACHE_TTL = 60; // seconds
 
 // Three-tier caching: in-memory LRU -> Redis -> PostgreSQL
@@ -1134,11 +1134,11 @@ export async function updateFlag(flagId: string, data: UpdateFlagInput) {
   });
 
   // Invalidate cache
-  await redis.del(`flagline:flags:${flag.environmentId}`);
+  await redis.del(`crivline:flags:${flag.environmentId}`);
 
   // Publish change event
   await redis.publish(
-    "flagline:flag-updates",
+    "crivline:flag-updates",
     JSON.stringify({
       type: "flag-updated",
       environmentId: flag.environmentId,
@@ -1155,9 +1155,9 @@ export async function updateFlag(flagId: string, data: UpdateFlagInput) {
 
 ```typescript
 redisSub.on("message", (channel, message) => {
-  if (channel === "flagline:flag-updates") {
+  if (channel === "crivline:flag-updates") {
     const event = JSON.parse(message);
-    redis.del(`flagline:flags:${event.environmentId}`);
+    redis.del(`crivline:flags:${event.environmentId}`);
     localCache.delete(event.environmentId);
     sseManager.broadcast(event);
   }
@@ -1541,7 +1541,7 @@ async function rateLimitHandler(
 
   const { id: apiKeyId, planTier } = request.apiKey;
   const limit = RATE_LIMITS[planTier] ?? RATE_LIMITS.starter;
-  const key = `flagline:ratelimit:${apiKeyId}`;
+  const key = `crivline:ratelimit:${apiKeyId}`;
   const now = Math.floor(Date.now() / 1000);
 
   try {
@@ -2145,7 +2145,7 @@ export class AuditLogService {
 
 ```
 # .env (via PgBouncer for production)
-DATABASE_URL="postgresql://user:pass@pgbouncer:6432/flagline?pgbouncer=true&connection_limit=10"
+DATABASE_URL="postgresql://user:pass@pgbouncer:6432/crivline?pgbouncer=true&connection_limit=10"
 ```
 
 For the evaluation API, route reads to a replica:
@@ -3079,7 +3079,7 @@ beforeEach(() => {
 
 ## Quick Reference: Laravel to Node.js/Fastify Mapping
 
-| Laravel Concept | Flagline Equivalent |
+| Laravel Concept | Crivline Equivalent |
 |---|---|
 | `routes/api.php` | `src/routes/*.ts` registered with `app.register()` |
 | `app/Http/Middleware/` | `src/middleware/*.ts` as Fastify plugins with `addHook` |
@@ -3104,4 +3104,4 @@ beforeEach(() => {
 
 ---
 
-*This document covers the evaluation API service architecture for Flagline. For dashboard API patterns (Next.js Route Handlers, Server Actions), see 05-nextjs-patterns.md.*
+*This document covers the evaluation API service architecture for Crivline. For dashboard API patterns (Next.js Route Handlers, Server Actions), see 05-nextjs-patterns.md.*

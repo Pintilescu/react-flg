@@ -1,6 +1,6 @@
 # 05 — Database & Prisma: A Thinking Guide
 
-> **Flagline** — Feature Flag SaaS
+> **Crivline** — Feature Flag SaaS
 > Stack: React, Next.js (App Router), Node.js, TypeScript, PostgreSQL (Prisma), Redis
 > Audience: Backend developer with 5+ years PHP/Laravel experience transitioning to this stack
 
@@ -25,7 +25,7 @@ This document is not a schema dump or a code reference. It is a guide for how to
 
 If you have been building with Laravel for five years, MySQL is probably what you know best. You know its quirks, its gotchas with character sets, its locking behavior under load. You know how to tune it. So the question is not "is PostgreSQL better in the abstract" -- it is "why does PostgreSQL make more sense for *this specific project*?"
 
-The answer comes down to three capabilities that Flagline uses daily, not just as nice-to-haves but as load-bearing parts of the architecture.
+The answer comes down to three capabilities that Crivline uses daily, not just as nice-to-haves but as load-bearing parts of the architecture.
 
 ### JSONB: The Reason That Matters Most
 
@@ -57,17 +57,17 @@ The mental model is this: a regular index is a phonebook of everyone in town. A 
 
 ### MVCC: Why Concurrent Reads and Writes Just Work
 
-Flagline has a very specific concurrency pattern: thousands of SDK clients reading flag configurations simultaneously, with a handful of dashboard users occasionally writing changes. This is a 99/1 read/write ratio on the hot path.
+Crivline has a very specific concurrency pattern: thousands of SDK clients reading flag configurations simultaneously, with a handful of dashboard users occasionally writing changes. This is a 99/1 read/write ratio on the hot path.
 
 Both PostgreSQL and MySQL use Multi-Version Concurrency Control (MVCC), but they implement it differently in ways that matter for this workload.
 
 In PostgreSQL, readers never block writers, and writers never block readers. Period. A transaction reading flag configs will never wait for another transaction that is updating a flag rule. They each see their own consistent snapshot of the data.
 
-MySQL's InnoDB MVCC has similar goals but uses a locking mechanism called next-key locking that can cause unexpected contention. If you have ever hit a deadlock in MySQL under concurrent writes to the same table, or seen `SELECT ... FOR UPDATE` hold up reads in ways you did not expect, that is the behavioral difference. It is not that MySQL is broken -- it is that its concurrency model has more edge cases, and those edge cases tend to bite you under exactly the kind of workload Flagline has.
+MySQL's InnoDB MVCC has similar goals but uses a locking mechanism called next-key locking that can cause unexpected contention. If you have ever hit a deadlock in MySQL under concurrent writes to the same table, or seen `SELECT ... FOR UPDATE` hold up reads in ways you did not expect, that is the behavioral difference. It is not that MySQL is broken -- it is that its concurrency model has more edge cases, and those edge cases tend to bite you under exactly the kind of workload Crivline has.
 
-If you have been running Laravel with MySQL for five years and never hit these locking issues, that is probably because your application did not have thousands of concurrent read connections. For Flagline's evaluation API, the cleaner MVCC implementation matters.
+If you have been running Laravel with MySQL for five years and never hit these locking issues, that is probably because your application did not have thousands of concurrent read connections. For Crivline's evaluation API, the cleaner MVCC implementation matters.
 
-> **Coming from Laravel/MySQL:** Think of it this way. In your Laravel app, you probably have a few dozen concurrent requests at most. Flagline's evaluation API can have thousands. At that scale, the difference between "readers never block writers" (PostgreSQL, always) and "readers usually do not block writers but sometimes gap locks cause surprises" (MySQL) becomes the difference between predictable latency and occasional tail latency spikes.
+> **Coming from Laravel/MySQL:** Think of it this way. In your Laravel app, you probably have a few dozen concurrent requests at most. Crivline's evaluation API can have thousands. At that scale, the difference between "readers never block writers" (PostgreSQL, always) and "readers usually do not block writers but sometimes gap locks cause surprises" (MySQL) becomes the difference between predictable latency and occasional tail latency spikes.
 
 ### Ecosystem Alignment
 
@@ -77,11 +77,11 @@ This is not a technical argument but an ergonomic one. When you search for "Pris
 
 ### Additional PostgreSQL Features Worth Knowing About
 
-A few more PostgreSQL capabilities that Flagline benefits from, briefly noted.
+A few more PostgreSQL capabilities that Crivline benefits from, briefly noted.
 
 **Native enums.** PostgreSQL supports `CREATE TYPE role AS ENUM ('OWNER', 'ADMIN', 'MEMBER')`. Prisma maps its `enum` declarations directly to PostgreSQL enum types. In MySQL, Prisma emulates enums as `VARCHAR` with a `CHECK` constraint, which means the database does not actually enforce enum membership at the type level. For a system where roles and flag types are critical to correctness, real enum types are a meaningful safety net.
 
-**Array columns.** PostgreSQL supports `TEXT[]`, `INT[]`, etc. Flagline uses this for API key permissions -- a single column holds `['EVALUATE', 'SERVER_SIDE']` rather than requiring a join table for a simple list. MySQL has no array column type. You would use a join table or a JSON column, both of which add complexity for what should be a simple list of values.
+**Array columns.** PostgreSQL supports `TEXT[]`, `INT[]`, etc. Crivline uses this for API key permissions -- a single column holds `['EVALUATE', 'SERVER_SIDE']` rather than requiring a join table for a simple list. MySQL has no array column type. You would use a join table or a JSON column, both of which add complexity for what should be a simple list of values.
 
 **Full-text search.** PostgreSQL has built-in `tsvector`/`tsquery` for searching flag names and descriptions. This is not a replacement for Elasticsearch, but it handles the "search flags by name" use case in the dashboard without adding another service. MySQL has full-text search too, but PostgreSQL's is more flexible in ranking and weighting.
 
@@ -163,7 +163,7 @@ Here is the trade-off analysis, factor by factor.
 
 **When would you choose normalized?** If the evaluation hot path were not the bottleneck -- for instance, if evaluation happened entirely client-side and the server just served configs. Or if you needed the database to enforce complex integrity rules on the rule tree. Or if you frequently queried across rules for analytics.
 
-**When is JSONB the right call?** When the hot path reads the whole document, writes replace the whole document, and the shape will evolve faster than you want to run migrations. That is Flagline's exact situation.
+**When is JSONB the right call?** When the hot path reads the whole document, writes replace the whole document, and the shape will evolve faster than you want to run migrations. That is Crivline's exact situation.
 
 The mental model: **JSONB is a document store inside your relational database.** Use it for data that behaves like a document -- read as a unit, written as a unit, with a schema that you enforce in application code (with Zod or similar) rather than in the database.
 
@@ -179,7 +179,7 @@ You also store the first eight characters of the key in plaintext. This is the "
 
 The query pattern on the hot path is: SDK sends the raw API key in a header. The evaluation API hashes it and looks up the hash. One indexed lookup returns the project ID, environment ID, and permissions. No join needed.
 
-> **Coming from Laravel:** Laravel Sanctum follows a similar pattern -- hash the token, store the hash, look up by hash on each request. The difference is that Sanctum uses a `personal_access_tokens` table that is user-scoped, while Flagline's API keys are project+environment scoped. The hashing and lookup logic is the same.
+> **Coming from Laravel:** Laravel Sanctum follows a similar pattern -- hash the token, store the hash, look up by hash on each request. The difference is that Sanctum uses a `personal_access_tokens` table that is user-scoped, while Crivline's API keys are project+environment scoped. The hashing and lookup logic is the same.
 
 ### Audit Logs: Append-Only With Snapshots
 
@@ -217,7 +217,7 @@ A common mistake is making things globally unique when they should be scoped. If
 
 ### Soft Deletion vs. Archival
 
-Flagline does not use soft deletes in the Laravel sense (a `deleted_at` timestamp that filters queries). Instead, flags have an `is_archived` boolean. The thinking behind this choice is worth understanding.
+Crivline does not use soft deletes in the Laravel sense (a `deleted_at` timestamp that filters queries). Instead, flags have an `is_archived` boolean. The thinking behind this choice is worth understanding.
 
 Soft deletes (a la Laravel's `SoftDeletes` trait) hide records from default queries but keep them in the database. The problem is that soft deletes affect every query on the table -- every `findMany` needs to exclude soft-deleted rows, and forgetting the filter brings back "deleted" records like ghosts.
 
@@ -225,7 +225,7 @@ Archival is a business concept, not a technical one. An archived flag is not "de
 
 The practical difference: with soft deletes, you tend to add a global scope that hides deleted records everywhere. With an `is_archived` field, you explicitly choose where to filter and where not to. The evaluation hot path filters it out. The dashboard shows both, with a tab or toggle. There is no global scope hiding data -- every query is explicit about whether it wants archived flags.
 
-Prisma does not have built-in soft delete support (no `SoftDeletes` trait equivalent). This is intentional -- Prisma prefers explicit queries over implicit behavior. If you want soft delete semantics, you implement them yourself with a Prisma Client Extension that adds the filter. For Flagline, the explicit `is_archived` approach is a better fit.
+Prisma does not have built-in soft delete support (no `SoftDeletes` trait equivalent). This is intentional -- Prisma prefers explicit queries over implicit behavior. If you want soft delete semantics, you implement them yourself with a Prisma Client Extension that adds the filter. For Crivline, the explicit `is_archived` approach is a better fit.
 
 ---
 
@@ -235,7 +235,7 @@ The most common indexing mistake is to add indexes after performance problems ap
 
 ### Start From the Queries
 
-Write down the queries before you write down the indexes. For Flagline, the critical queries are:
+Write down the queries before you write down the indexes. For Crivline, the critical queries are:
 
 1. **Evaluation hot path:** Get all enabled flag configs for a given environment where the flag is not archived. This runs thousands of times per second.
 2. **Dashboard flag list:** Get all flags for a project, optionally filtered by environment and archived status. This runs on every dashboard page load.
@@ -249,7 +249,7 @@ Each of these queries tells you what index it needs.
 
 The mental model for a composite index is a sorted phonebook. If the index is on `(last_name, first_name)`, the phonebook is sorted by last name first, then by first name within each last name. You can look up everyone named "Smith" efficiently (using just the first column). You can look up "Smith, Alice" efficiently (using both columns). You *cannot* look up everyone named "Alice" efficiently (using just the second column), because Alices are scattered throughout the phonebook next to their various last names.
 
-Applied to Flagline: the index on `flag_environments(environment_id, enabled)` supports three query patterns: filtering by `environment_id` alone, filtering by `environment_id AND enabled`, and (in principle) range scans on `environment_id`. It does *not* efficiently support filtering by `enabled` alone, because `enabled=true` rows are scattered across all environment IDs in the index.
+Applied to Crivline: the index on `flag_environments(environment_id, enabled)` supports three query patterns: filtering by `environment_id` alone, filtering by `environment_id AND enabled`, and (in principle) range scans on `environment_id`. It does *not* efficiently support filtering by `enabled` alone, because `enabled=true` rows are scattered across all environment IDs in the index.
 
 The rule of thumb: **put the most selective column first** (the one that narrows down the most rows), then add columns in order of decreasing selectivity. For the evaluation hot path, `environment_id` narrows to a few dozen rows at most (all flags in one environment), and `enabled` further narrows to the ones that are turned on. The index reads only the rows the query wants.
 
@@ -259,7 +259,7 @@ The rule of thumb: **put the most selective column first** (the one that narrows
 
 A partial index includes a `WHERE` clause, and only rows matching that clause go into the index. The classic use case is boolean flags where one value is much more common than the other, or where you only ever query one value.
 
-In Flagline, you only query active (non-archived) flags on the hot path. You only query enabled flag environments. You only query non-revoked API keys. In all three cases, the "active" subset is what you care about at query time, and the "inactive" subset accumulates over time as dead weight in a regular index.
+In Crivline, you only query active (non-archived) flags on the hot path. You only query enabled flag environments. You only query non-revoked API keys. In all three cases, the "active" subset is what you care about at query time, and the "inactive" subset accumulates over time as dead weight in a regular index.
 
 The thinking framework: **if your WHERE clause always includes a fixed predicate (like `is_archived = false`), and the rows matching that predicate are a minority of the table, a partial index gives you a smaller, faster, more memory-efficient index.** "Minority" does not need to be dramatic -- even a 50/50 split means the index is half the size. But the benefit is biggest when 90% of rows are in the excluded state.
 
@@ -279,7 +279,7 @@ There are two flavors: `GIN (column)` indexes all operators (`@>`, `?`, `?|`, `?
 
 Every index speeds up reads but slows down writes. Each INSERT must update every index on the table. Each UPDATE that touches an indexed column must update the corresponding indexes. For a table that receives thousands of writes per second, adding five indexes means five extra write operations per row.
 
-Flagline's `flag_environments` table is read-heavy on the hot path but written to only when someone changes flag configuration in the dashboard. This is a write-infrequent table. Indexes are essentially free here.
+Crivline's `flag_environments` table is read-heavy on the hot path but written to only when someone changes flag configuration in the dashboard. This is a write-infrequent table. Indexes are essentially free here.
 
 The `audit_logs` table is write-heavy (every action in the system creates an entry) and read-moderate (viewed in the dashboard). Be judicious with indexes here. The composite index for pagination is necessary. A GIN index on the `metadata` column is probably not worth it unless you have a specific query that needs it.
 
@@ -303,7 +303,7 @@ There are three common approaches to multi-tenancy in PostgreSQL.
 
 **Row-level filtering:** All tenants share all tables. Every table with tenant-specific data has a `tenant_id` column, and every query includes `WHERE tenant_id = ?`. Simplest operationally -- one database, one migration run, one connection pool. The risk is in the "every query" part: forget the filter once, and you have a data leak.
 
-For Flagline, row-level filtering is the right choice. The operational simplicity of a single database with a single set of migrations, running on a single connection pool, is worth the discipline of ensuring every query is tenant-scoped. The number of tenants will be in the hundreds or low thousands, not millions. The data per tenant is modest. There is no regulatory requirement for physical isolation.
+For Crivline, row-level filtering is the right choice. The operational simplicity of a single database with a single set of migrations, running on a single connection pool, is worth the discipline of ensuring every query is tenant-scoped. The number of tenants will be in the hundreds or low thousands, not millions. The data per tenant is modest. There is no regulatory requirement for physical isolation.
 
 ### The Danger: Forgetting the Filter
 
@@ -327,7 +327,7 @@ Row Level Security (RLS) is a database-level feature where PostgreSQL itself enf
 
 The setup is: enable RLS on each tenant-scoped table, create a policy that compares the row's `tenant_id` to a session variable, and then set that session variable at the start of each request using `SET LOCAL app.current_tenant_id = '...'`.
 
-RLS adds a small per-query overhead because PostgreSQL evaluates the policy predicate on every row access. For Flagline, the Prisma extension is the primary defense (fast, application-level), and RLS is the secondary defense (slower, database-level) that you enable for compliance-sensitive deployments or as a paranoia-driven safety net.
+RLS adds a small per-query overhead because PostgreSQL evaluates the policy predicate on every row access. For Crivline, the Prisma extension is the primary defense (fast, application-level), and RLS is the secondary defense (slower, database-level) that you enable for compliance-sensitive deployments or as a paranoia-driven safety net.
 
 The mental model: **the Prisma extension is the lock on your front door. RLS is the alarm system. You want both, but you rely on the lock for daily life.**
 
@@ -383,7 +383,7 @@ This mapping means your TypeScript code always uses camelCase (`fe.environmentId
 
 ### CUIDs vs. Auto-Increment IDs
 
-Flagline uses CUIDs (Collision-resistant Unique Identifiers) as primary keys instead of auto-incrementing integers. A CUID looks like `clx7abcde0001...` -- a string that is roughly sortable by creation time, globally unique, and does not reveal how many records exist (unlike integer IDs where `id=42` tells you there are at most 42 records).
+Crivline uses CUIDs (Collision-resistant Unique Identifiers) as primary keys instead of auto-incrementing integers. A CUID looks like `clx7abcde0001...` -- a string that is roughly sortable by creation time, globally unique, and does not reveal how many records exist (unlike integer IDs where `id=42` tells you there are at most 42 records).
 
 The trade-off: CUIDs are larger (25+ characters vs. 8 bytes for a bigint), which makes indexes larger and joins slightly slower. But they enable one critical pattern: generating the ID on the client side before the INSERT. The application creates the ID, uses it in the INSERT statement, and can return it immediately without a database round-trip to read the generated ID. This matters for transactions and for building related objects before persisting them.
 
@@ -393,7 +393,7 @@ In Prisma, `@default(cuid())` generates the CUID in the Prisma client, not in th
 
 Prisma's `Json` type maps to PostgreSQL's `jsonb`, but the TypeScript type it returns is `JsonValue` -- which is essentially `unknown`. Prisma cannot know at compile time what shape the JSON has, because the database stores arbitrary JSON.
 
-This means every time you read a `Json` field, you must validate and cast it before using it. In Flagline, the `rules` field is validated with a Zod schema. You read the raw `JsonValue`, parse it through `FlagRulesSchema.safeParse(raw)`, and get back either a typed `FlagRules` object or a validation error.
+This means every time you read a `Json` field, you must validate and cast it before using it. In Crivline, the `rules` field is validated with a Zod schema. You read the raw `JsonValue`, parse it through `FlagRulesSchema.safeParse(raw)`, and get back either a typed `FlagRules` object or a validation error.
 
 There is also a subtle distinction between `null` and JSON null. When a `Json?` field is SQL NULL (the column has no value), Prisma represents it as `Prisma.DbNull`. When the column contains the JSON literal `null` (the string "null" stored as JSONB), Prisma represents it as `Prisma.JsonNull`. JavaScript `null` is ambiguous and Prisma rejects it for `Json` fields to avoid confusion.
 
@@ -486,7 +486,7 @@ This architectural decision (server serves configs, client evaluates them) is wh
 
 If you were doing server-side evaluation (the server evaluates rules against the user context and returns just the flag values), the hot path would be more complex: you would need the user context in the query, and the response would be per-user rather than per-environment. The cache would be less effective because it would need to be keyed per user, not per environment.
 
-Both architectures are valid. LaunchDarkly supports both. For Flagline, client-side evaluation is the default because it makes the server stateless with respect to users, makes caching trivial (cache per environment), and pushes evaluation compute to the client.
+Both architectures are valid. LaunchDarkly supports both. For Crivline, client-side evaluation is the default because it makes the server stateless with respect to users, makes caching trivial (cache per environment), and pushes evaluation compute to the client.
 
 ---
 
@@ -562,7 +562,7 @@ The decision framework is straightforward.
 
 A concrete test: if you `FLUSHALL` Redis (delete everything), does the system recover on its own? If yes, the data belongs in Redis. If no, it belongs in Postgres.
 
-### The Three Uses of Redis in Flagline
+### The Three Uses of Redis in Crivline
 
 **Caching flag configs.** The evaluation API caches the full set of flag configs per environment. This turns a database query into a Redis GET, reducing latency from ~1ms to ~0.1ms and reducing database connections from thousands to single digits. The cache key includes the project ID and environment ID, making invalidation precise.
 
@@ -572,23 +572,23 @@ A concrete test: if you `FLUSHALL` Redis (delete everything), does the system re
 
 ### Key Naming Conventions
 
-Redis keys are strings with no inherent structure, so structure must be imposed by convention. The convention in Flagline is colon-delimited namespaces starting with `flagline:`.
+Redis keys are strings with no inherent structure, so structure must be imposed by convention. The convention in Crivline is colon-delimited namespaces starting with `crivline:`.
 
-The pattern: `flagline:{scope}:{identifier}:{data-type}`.
+The pattern: `crivline:{scope}:{identifier}:{data-type}`.
 
-For example, `flagline:{projectId}:{envId}:flags` caches all flag configs for an environment. `flagline:apikey:{hash}` caches API key metadata. `flagline:ratelimit:{apiKeyId}:{window}` tracks request counts.
+For example, `crivline:{projectId}:{envId}:flags` caches all flag configs for an environment. `crivline:apikey:{hash}` caches API key metadata. `crivline:ratelimit:{apiKeyId}:{window}` tracks request counts.
 
 Why does this matter? Because Redis has no tables or collections. Every key lives in one flat namespace. Without a naming convention, you end up with keys like `flags_prod_123` and `user:42:settings` and `rate-limit-abc` -- inconsistent, hard to discover, impossible to batch-delete by pattern.
 
-With the namespace convention, you can use `SCAN` with a pattern like `flagline:*:flags` to find all flag config caches, or `flagline:ratelimit:*` to inspect all rate limit counters. The convention makes Redis inspectable.
+With the namespace convention, you can use `SCAN` with a pattern like `crivline:*:flags` to find all flag config caches, or `crivline:ratelimit:*` to inspect all rate limit counters. The convention makes Redis inspectable.
 
-> **Coming from Laravel:** If you have used Laravel's cache with the `prefix` config, the concept is the same. Laravel prefixes all cache keys with `laravel_cache:` by default to avoid collisions. Flagline's convention is more explicit and hierarchical, but the purpose is identical.
+> **Coming from Laravel:** If you have used Laravel's cache with the `prefix` config, the concept is the same. Laravel prefixes all cache keys with `laravel_cache:` by default to avoid collisions. Crivline's convention is more explicit and hierarchical, but the purpose is identical.
 
 ### TTL Strategy Thinking
 
 Every piece of data in Redis should have a TTL (time-to-live) unless there is a good reason for it to persist indefinitely. The risk of TTL-less data is that it accumulates silently until Redis runs out of memory.
 
-The two exceptions in Flagline are SSE connection counters (managed by explicit increment/decrement, cleaned up by a periodic reconciliation job) and any data you are using as a distributed lock (which has a short TTL as a safety mechanism, but needs to persist for the lock duration).
+The two exceptions in Crivline are SSE connection counters (managed by explicit increment/decrement, cleaned up by a periodic reconciliation job) and any data you are using as a distributed lock (which has a short TTL as a safety mechanism, but needs to persist for the lock duration).
 
 For cache data, the TTL is the maximum acceptable staleness. Ask yourself: if this data were 60 seconds stale, would anyone notice? For flag configs, probably not -- most flag changes are not urgent to the millisecond. For API key revocation, yes -- a revoked key should stop working within seconds, which is why revocation triggers active invalidation rather than waiting for TTL expiry.
 
@@ -600,7 +600,7 @@ Redis offers several data structures, and choosing the right one for each use ca
 
 **Strings** (the simplest: key-value) are used for cached flag configs (a JSON string) and rate limit counters (an integer that you `INCR`). Strings are right when you always read and write the whole value.
 
-**Hashes** (a key with named fields) are used for cached API key metadata. The advantage over a JSON string is that you can read individual fields without parsing the whole document: `HGET flagline:apikey:{hash} permissions` returns just the permissions, not the entire key metadata. This matters when different code paths need different fields.
+**Hashes** (a key with named fields) are used for cached API key metadata. The advantage over a JSON string is that you can read individual fields without parsing the whole document: `HGET crivline:apikey:{hash} permissions` returns just the permissions, not the entire key metadata. This matters when different code paths need different fields.
 
 **Pub/Sub** (fire-and-forget messaging) is used for flag change notifications. It is not a data structure in the storage sense -- messages are not persisted. If no subscriber is listening, the message is gone. This is fine for SSE push because clients that miss a message will reconcile on their next poll.
 

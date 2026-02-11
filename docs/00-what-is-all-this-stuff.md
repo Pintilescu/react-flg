@@ -1,6 +1,6 @@
 # What Is All This Stuff?
 
-A plain-English guide to every tool, file, and concept in the Flagline monorepo — written for someone coming from the PHP/Laravel world.
+A plain-English guide to every tool, file, and concept in the Crivline monorepo — written for someone coming from the PHP/Laravel world.
 
 ---
 
@@ -22,7 +22,7 @@ A plain-English guide to every tool, file, and concept in the Flagline monorepo 
 
 **What it is:** A build orchestrator for monorepos. It does NOT build your code — it tells other tools (like `tsc`, `tsup`, `next build`) when and in what order to build.
 
-**The problem it solves:** You have 8 packages. Some depend on others. `@flagline/react` depends on `@flagline/js`, which depends on `@flagline/types`. If you change something in `types`, you need to rebuild `js`, then `react`, then the dashboard and API. Turborepo figures out this order automatically.
+**The problem it solves:** You have 8 packages. Some depend on others. `@crivline/react` depends on `@crivline/js`, which depends on `@crivline/types`. If you change something in `types`, you need to rebuild `js`, then `react`, then the dashboard and API. Turborepo figures out this order automatically.
 
 The killer feature is caching. If you run `turbo build` and nothing changed in `packages/sdk-js` since last time, Turborepo skips it entirely and replays the cached output. This makes builds fast — especially in CI.
 
@@ -38,7 +38,7 @@ The killer feature is caching. If you run `turbo build` and nothing changed in `
 
 **Why not Express?** Express is the Laravel of Node.js — everyone knows it, huge ecosystem, been around forever. But it's old, has clunky async support, and is slower. Fastify is the modern alternative: built-in TypeScript support, automatic JSON serialization that's 2-3x faster, proper async/await error handling, and a plugin system that encourages clean architecture.
 
-**Why is Flagline using Fastify instead of Next.js for the API?** The evaluation API needs to handle thousands of requests per second, hold open long-lived SSE connections, and scale independently from the dashboard. Next.js API routes run as serverless functions on Vercel — they spin up, handle one request, and die. That doesn't work for SSE (which needs a persistent connection) and adds cold-start latency to flag evaluations. Fastify runs as a long-lived process on Fly.io, always warm, always ready.
+**Why is Crivline using Fastify instead of Next.js for the API?** The evaluation API needs to handle thousands of requests per second, hold open long-lived SSE connections, and scale independently from the dashboard. Next.js API routes run as serverless functions on Vercel — they spin up, handle one request, and die. That doesn't work for SSE (which needs a persistent connection) and adds cold-start latency to flag evaluations. Fastify runs as a long-lived process on Fly.io, always warm, always ready.
 
 **The Laravel equivalent:** Think of Fastify as a stripped-down Lumen — lightweight, fast, just the HTTP stuff. The dashboard (Next.js) is like your full Laravel app with Blade views. The evaluation API (Fastify) is like a separate Lumen microservice.
 
@@ -107,15 +107,15 @@ The upside: TypeScript knows the exact shape of what you get back, and it change
 ## The Folder Structure
 
 ```
-Flagline/
+Crivline/
 ├── apps/
 │   ├── dashboard/        → The Next.js SaaS dashboard (deployed to Vercel)
 │   └── api/              → The Fastify evaluation API (deployed to Fly.io)
 ├── packages/
 │   ├── shared-types/     → TypeScript types shared across everything
 │   ├── db/               → Prisma schema, client, and migrations
-│   ├── sdk-js/           → @flagline/js — the core SDK (published to npm)
-│   ├── sdk-react/        → @flagline/react — React wrapper (published to npm)
+│   ├── sdk-js/           → @crivline/js — the core SDK (published to npm)
+│   ├── sdk-react/        → @crivline/react — React wrapper (published to npm)
 │   ├── config-eslint/    → Shared linting rules
 │   └── config-typescript/→ Shared tsconfig base files
 ├── docs/                 → The reference documents you're reading
@@ -145,7 +145,7 @@ Flagline/
 
 ```
 Browser (your customer's app)
-  └─ @flagline/js SDK
+  └─ @crivline/js SDK
        └─ HTTP requests + SSE connection
             └─ Fastify Evaluation API (apps/api)
                  ├─ Redis (cache + pub/sub)
@@ -167,7 +167,7 @@ The dashboard talks directly to the database (server components can call Prisma)
 In each package's `package.json`, you'll see dependencies like:
 
 ```json
-"@flagline/db": "workspace:*"
+"@crivline/db": "workspace:*"
 ```
 
 This is pnpm's way of saying "import this from the monorepo, not from npm." It's like a Composer path repository (`"repositories": [{"type": "path", "url": "../packages/db"}]`) but built into the package manager. When you publish to npm, `workspace:*` gets replaced with the actual version number.

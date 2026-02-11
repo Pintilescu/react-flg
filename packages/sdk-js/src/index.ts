@@ -1,7 +1,7 @@
-export { FlaglineClient } from './client';
+export { CrivlineClient } from './client';
 export type {
-  FlaglineConfig,
-  FlaglineUser,
+  CrivlineConfig,
+  CrivlineUser,
   FlagValue,
   Unsubscribe,
 } from './types';

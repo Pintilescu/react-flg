@@ -1,5 +1,5 @@
 {
-  "name": "@flagline/dashboard",
+  "name": "@crivline/dashboard",
   "private": true,
   "version": "0.0.0",
   "scripts": {
@@ -11,8 +11,9 @@
     "clean": "rm -rf .next .turbo"
   },
   "dependencies": {
-    "@flagline/db": "workspace:*",
-    "@flagline/types": "workspace:*",
+    "@auth0/nextjs-auth0": "^4.14.1",
+    "@crivline/db": "workspace:*",
+    "@crivline/types": "workspace:*",
     "@tailwindcss/postcss": "^4.1.18",
     "lucide-react": "^0.563.0",
     "next": "^15.1.6",
@@ -22,8 +23,8 @@
     "tailwindcss": "^4.1.18"
   },
   "devDependencies": {
-    "@flagline/config-eslint": "workspace:*",
-    "@flagline/config-typescript": "workspace:*",
+    "@crivline/config-eslint": "workspace:*",
+    "@crivline/config-typescript": "workspace:*",
     "@types/node": "^22.10.7",
     "@types/react": "^19.0.7",
     "@types/react-dom": "^19.0.3",

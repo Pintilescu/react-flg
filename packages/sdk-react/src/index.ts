@@ -1,2 +1,2 @@
-export { FlaglineProvider } from './provider';
-export { useFlag, useFlagline, useFlags } from './hooks';
+export { CrivlineProvider } from './provider';
+export { useFlag, useCrivline, useFlags } from './hooks';
