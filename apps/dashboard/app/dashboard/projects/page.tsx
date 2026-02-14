@@ -76,7 +76,6 @@ export default async function Projects() {
               href={`/dashboard/projects/${project.slug}`}
               className="group bg-white border border-gray-200 rounded-xl p-5 hover:shadow-md hover:border-gray-300 transition-all"
             >
-              {/* Header */}
               <div className="flex items-start justify-between mb-3">
                 <div className="flex items-center gap-2.5">
                   <div
@@ -91,12 +90,10 @@ export default async function Projects() {
                 </button>
               </div>
 
-              {/* Description */}
               {project.description && (
                 <p className="text-xs text-gray-400 mb-3 line-clamp-2">{project.description}</p>
               )}
 
-              {/* Environment badges */}
               <div className="flex flex-wrap gap-1.5 mb-4">
                 {project.environments.map((env) => (
                   <span
@@ -112,7 +109,6 @@ export default async function Projects() {
                 ))}
               </div>
 
-              {/* Flag stats */}
               <div className="mb-4">
                 <div className="flex items-baseline justify-between mb-1.5">
                   <span className="text-sm font-semibold text-gray-900">{totalFlags} flags</span>
@@ -128,17 +124,19 @@ export default async function Projects() {
                 </div>
               </div>
 
-              {/* API Keys */}
               <div className="mb-4">
                 <div className="flex items-center gap-2 bg-gray-50 rounded-lg px-3 py-2">
-                  <div className={`w-1.5 h-1.5 rounded-full ${apiKeyCount > 0 ? 'bg-emerald-500' : 'bg-gray-300'}`} />
+                  <div
+                    className={`w-1.5 h-1.5 rounded-full ${apiKeyCount > 0 ? 'bg-emerald-500' : 'bg-gray-300'}`}
+                  />
                   <span className="text-xs text-gray-500">
-                    {apiKeyCount > 0 ? `${apiKeyCount} API ${apiKeyCount === 1 ? 'key' : 'keys'} active` : 'No API keys'}
+                    {apiKeyCount > 0
+                      ? `${apiKeyCount} API ${apiKeyCount === 1 ? 'key' : 'keys'} active`
+                      : 'No API keys'}
                   </span>
                 </div>
               </div>
 
-              {/* Footer */}
               <div className="flex items-center gap-1.5 text-xs text-gray-400">
                 <Clock className="h-3 w-3" />
                 Updated {timeAgo(project.updatedAt)}
@@ -147,15 +145,12 @@ export default async function Projects() {
           );
         })}
 
-        {/* Create New Project card */}
         <button className="border-2 border-dashed border-gray-200 rounded-xl p-5 flex flex-col items-center justify-center text-center hover:border-emerald-300 hover:bg-emerald-50/30 transition-colors min-h-[280px] group">
           <div className="w-10 h-10 rounded-full bg-gray-100 group-hover:bg-emerald-100 flex items-center justify-center mb-3 transition-colors">
             <Plus className="h-5 w-5 text-gray-400 group-hover:text-emerald-500 transition-colors" />
           </div>
           <p className="font-semibold text-gray-900 text-sm">Create New Project</p>
-          <p className="text-xs text-gray-400 mt-1">
-            Group flags by application or team.
-          </p>
+          <p className="text-xs text-gray-400 mt-1">Group flags by application or team.</p>
         </button>
       </div>
     </div>
